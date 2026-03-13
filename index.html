@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuestra Historia - Diario de Viajes</title>
+    
+    <!-- Librerías Externas -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === VARIABLES Y DISEÑO === */
+        :root {
+            --bg-main: #E1F5FE;
+            --panel-bg: #FFFFFF;
+            --primary: #FF4081; 
+            --secondary: #00BCD4; 
+            --text-main: #455A64; 
+            --btn-glow: rgba(255, 64, 129, 0.6); 
+            --btn-glow-sec: rgba(0, 188, 212, 0.6); 
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Quicksand', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background: radial-gradient(circle at top left, #FFFFFF 0%, #E1F5FE 100%);
+        }
+
+        /* === CONTENEDORES === */
+        .contenedor-principal { display: flex; width: 100%; height: 100%; padding: 15px; box-sizing: border-box; gap: 15px; }
+        
+        .sidebar {
+            width: 280px;
+            background-color: var(--panel-bg);
+            padding: 25px 20px;
+            display: flex;
+            flex-direction: column;
+            border-radius: 35px;
+            box-shadow: 0 10px 25px rgba(0, 188, 212, 0.15), 0 0 0 6px #B3E5FC; 
+            z-index: 10;
+        }
+
+        .logo-titulo { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--primary); margin-bottom: 30px; }
+        .logo-titulo h1 { font-size: 1.6rem; margin: 0; font-weight: 900; text-align: center; }
+        .icono-magia { color: #FFCA28; fill: #FFE082; }
+
+        .menu-lateral { display: flex; flex-direction: column; gap: 18px; }
+        
+        .btn-menu {
+            background: #FFF8FA; border: 3px solid #F8BBD0; color: #D81B60;
+            padding: 14px 20px; border-radius: 50px; cursor: pointer; text-align: left;
+            display: flex; align-items: center; gap: 12px; 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-family: 'Quicksand', sans-serif; font-size: 1.05rem; font-weight: 700;
+        }
+        
+        .btn-menu:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 20px var(--btn-glow); border-color: var(--primary); }
+        .btn-menu.activo { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 25px var(--btn-glow), 0 8px 15px rgba(255, 64, 129, 0.3); transform: translateY(-2px); }
+
+        .contenido-principal {
+            flex-grow: 1; position: relative; display: flex; flex-direction: column;
+            background: #FFFFFF; border-radius: 35px; box-shadow: 0 10px 25px rgba(0, 188, 212, 0.15), 0 0 0 6px #B3E5FC;
+            overflow: hidden;
+        }
+
+        .pantalla { display: none; width: 100%; height: 100%; flex-direction: column; }
+        .pantalla-activa { display: flex; animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
+
+        /* === ÁREA DEL MAPA === */
+        #world-map { width: 100%; height: 100%; position: relative; overflow: hidden; background: #E1F5FE; border-radius: 35px; }
+        #mapa-svg { width: 100%; height: 100%; cursor: grab; }
+        #mapa-svg:active { cursor: grabbing; }
+
+        .pais { fill: #CFD8DC; stroke: #FFFFFF; stroke-width: 1.5px; transition: all 0.3s; stroke-linejoin: round; }
+        .pais:hover { fill: #81D4FA; cursor: pointer; }
+        .pais.visitado { fill: var(--primary); stroke: #FFFFFF; stroke-width: 2px; }
+        .pais.sonado { fill: #FFB300; stroke: #FFFFFF; stroke-width: 2px; }
+        .pais.visitado.sonado { fill: #FF7043; } 
+
+        /* === COMPONENTES FLOTANTES === */
+        #tooltip {
+            position: absolute; background: #FFFFFF; border: 4px solid var(--secondary);
+            padding: 10px 20px; border-radius: 30px; color: var(--secondary); pointer-events: none;
+            font-weight: 800; font-size: 1.1rem; box-shadow: 0 0 20px var(--btn-glow-sec); z-index: 2000;
+            transition: opacity 0.2s; transform: translate(-50%, -130%);
+        }
+        .tooltip-oculto { opacity: 0; visibility: hidden; }
+        .tooltip-visible { opacity: 1; visibility: visible; }
+
+        #menu-contextual {
+            position: absolute; background: #FFFFFF; border: 4px solid #F8BBD0;
+            border-radius: 25px; padding: 18px; box-shadow: 0 15px 35px rgba(255, 64, 129, 0.2); 
+            z-index: 1000; min-width: 220px;
+        }
+        .menu-oculto { display: none; }
+        .menu-visible { display: block; animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .menu-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px dashed #F48FB1; padding-bottom: 12px; margin-bottom: 12px; }
+        .menu-titulo { margin: 0; font-size: 1.3rem; font-weight: 900; }
+        .btn-cerrar-menu { background: #FCE4EC; border: none; color: #D81B60; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .btn-cerrar-menu:hover { background: var(--primary); color: white; transform: scale(1.1); }
+        
+        .opciones-menu { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+        .opciones-menu li { padding: 10px 15px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s; font-size: 1rem; font-weight: 700; color: #546E7A; background: #F5F5F5; }
+        .opciones-menu li:hover { background: #E1F5FE; color: var(--secondary); transform: translateX(5px); box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2); }
+
+        .spin { animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* === SECCIÓN DE RECUERDOS Y SOÑADOS === */
+        .encabezado-seccion { padding: 20px 30px; border-bottom: 4px dashed #E1F5FE; background: #FFFFFF; z-index: 5; }
+        h2 { color: var(--primary); font-size: 2rem; font-weight: 900; margin: 0; text-shadow: 2px 2px 0px #F8BBD0; display: flex; align-items: center; gap: 15px;}
+        
+        .contenedor-scroll { flex-grow: 1; overflow-y: auto; padding: 30px; background: #FAFAFA; }
+        
+        .lista-paises { display: flex; flex-direction: column; gap: 20px; }
+        .tarjeta-pais { 
+            background: #FFFFFF; border: 3px solid #B3E5FC; border-radius: 25px; padding: 20px; 
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 8px 15px rgba(0, 188, 212, 0.08); transition: all 0.3s ease;
+        }
+        .tarjeta-pais:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0, 188, 212, 0.2); border-color: var(--secondary); }
+        .info-pais { display: flex; align-items: center; gap: 15px; }
+        .icono-bandera { width: 50px; height: 50px; background: #E1F5FE; color: var(--secondary); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
+        .nombre-pais-lista { font-size: 1.4rem; font-weight: 800; color: #455A64; margin: 0; }
+        .zonas-badge { background: #FCE4EC; color: #D81B60; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 5px; display: inline-block; }
+        
+        .btn-accion-pais { 
+            background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 50px; 
+            font-family: 'Quicksand', sans-serif; font-size: 1.1rem; font-weight: 800; cursor: pointer; 
+            transition: all 0.2s; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px var(--btn-glow);
+        }
+        .btn-accion-pais.secundario { background: #FFB300; box-shadow: 0 5px 15px rgba(255, 179, 0, 0.4); }
+        .btn-accion-pais:hover { transform: scale(1.05); filter: brightness(1.1); }
+
+        .mensaje-vacio { text-align: center; padding: 50px 20px; color: #90A4AE; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .mensaje-vacio svg { width: 80px; height: 80px; color: #CFD8DC; }
+        .mensaje-vacio p { font-size: 1.3rem; font-weight: 700; max-width: 400px; line-height: 1.5; }
+
+        /* Pantallas Detalle */
+        .cabecera-detalle { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 3px solid #E1F5FE; margin-bottom: 20px; gap: 20px; flex-wrap: wrap; }
+        .btn-volver { 
+            background: #FFFFFF; border: 3px solid #CFD8DC; color: #546E7A; width: 45px; height: 45px; 
+            border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; 
+        }
+        .btn-volver:hover { border-color: var(--secondary); color: var(--secondary); transform: translateX(-5px); }
+        
+        .btn-borrar-itinerario {
+            background: #FFEBEE; border: 2px solid #FFCDD2; color: #F44336;
+            padding: 10px 18px; border-radius: 15px; font-weight: bold; font-family: 'Quicksand'; font-size: 1rem;
+            cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;
+        }
+        .btn-borrar-itinerario:hover { background: #F44336; color: white; border-color: #F44336; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3); }
+
+        .galeria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .tarjeta-agregar { 
+            border: 4px dashed #B3E5FC; background: #F0FBFF; border-radius: 25px; height: 200px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            color: var(--secondary); cursor: pointer; transition: all 0.3s; font-weight: 800; font-size: 1.1rem; gap: 15px;
+        }
+        .tarjeta-agregar:hover { background: #E1F5FE; transform: scale(1.03); }
+
+        /* === ITINERARIO === */
+        .panel-creacion { background: #FFFFFF; border: 3px solid #E1F5FE; border-radius: 25px; padding: 20px; margin-bottom: 30px; }
+        .botones-tipos { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .btn-tipo-item { 
+            background: #F5F5F5; border: 2px solid #CFD8DC; color: #546E7A; padding: 10px 15px; border-radius: 15px;
+            font-family: 'Quicksand', sans-serif; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-tipo-item:hover, .btn-tipo-item.seleccionado { background: #E1F5FE; border-color: var(--secondary); color: var(--secondary); transform: translateY(-2px); }
+        
+        .formulario-itinerario { display: none; background: #F0FBFF; padding: 20px; border-radius: 20px; border: 2px dashed #B3E5FC; }
+        .formulario-itinerario.activo { display: block; animation: scaleIn 0.3s ease; }
+        .campo-form { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+        .campo-form label { font-weight: 800; color: #455A64; font-size: 0.95rem; }
+        .campo-form input, .campo-form select { 
+            padding: 12px; border: 2px solid #CFD8DC; border-radius: 12px; font-family: 'Quicksand', sans-serif; font-weight: 600; color: #455A64; outline: none; transition: 0.2s; 
+        }
+        .campo-form input:focus, .campo-form select:focus { border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2); }
+        .btn-guardar-item { background: var(--secondary); color: white; border: none; padding: 12px 20px; border-radius: 15px; font-weight: bold; font-family: 'Quicksand'; font-size: 1.1rem; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-guardar-item:hover { background: #00ACC1; transform: translateY(-2px); box-shadow: 0 5px 15px var(--btn-glow-sec); }
+
+        .linea-tiempo { position: relative; padding-left: 30px; margin-top: 20px; }
+        .linea-tiempo::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 4px; background: #E1F5FE; border-radius: 4px; }
+        
+        .item-timeline { position: relative; margin-bottom: 25px; background: #FFFFFF; border: 2px solid #E1F5FE; border-radius: 20px; padding: 15px 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: 0.2s; }
+        .item-timeline:hover { border-color: #B3E5FC; transform: translateX(5px); }
+        
+        .punto-timeline { 
+            position: absolute; left: -30px; top: 20px; width: 24px; height: 24px; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; background: white; border: 4px solid var(--secondary); z-index: 2;
+        }
+        .item-timeline.viaje .punto-timeline { border-color: #FFB300; }
+        .item-timeline.hospedaje .punto-timeline { border-color: #9C27B0; }
+        .item-timeline.aventura .punto-timeline { border-color: #4CAF50; }
+        .item-timeline.restaurante .punto-timeline { border-color: #FF5252; }
+
+        .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .item-titulo { font-size: 1.2rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .item-detalles { color: #546E7A; font-weight: 600; font-size: 0.95rem; display: flex; flex-direction: column; gap: 5px; }
+        .badge-horario { background: #F5F5F5; padding: 3px 8px; border-radius: 10px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; color: #78909C; }
+        .btn-eliminar-item { background: none; border: none; color: #FFCDD2; cursor: pointer; transition: 0.2s; }
+        .btn-eliminar-item:hover { color: #F44336; transform: scale(1.1); }
+
+    </style>
+</head>
+<body>
+    <div class="contenedor-principal">
+        <aside class="sidebar">
+            <div class="logo-titulo">
+                <i data-lucide="sparkles" class="icono-magia"></i>
+                <h1>Nuestra<br>Historia</h1>
+            </div>
+            <nav class="menu-lateral">
+                <button class="btn-menu activo" data-target="vista-explora" onclick="irAPantalla('vista-explora')">
+                    <i data-lucide="globe"></i> Mundo Entero
+                </button>
+                <button class="btn-menu" data-target="vista-vividas" onclick="irAPantalla('vista-vividas')">
+                    <i data-lucide="camera"></i> Recuerdos
+                </button>
+                <button class="btn-menu" data-target="vista-por-vivir" onclick="irAPantalla('vista-por-vivir')">
+                    <i data-lucide="heart"></i> Destinos Soñados
+                </button>
+            </nav>
+        </aside>
+
+        <main class="contenido-principal">
+            <div id="vista-explora" class="pantalla pantalla-activa">
+                <div id="world-map"></div>
+                <div id="tooltip" class="tooltip-oculto"><span id="tooltip-nombre"></span></div>
+                <div id="menu-contextual" class="menu-oculto"></div>
+            </div>
+
+            <div id="vista-vividas" class="pantalla"></div>
+            <div id="vista-por-vivir" class="pantalla"></div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // BASES DE DATOS EN MEMORIA
+        let paisesVisitados = {}; 
+        let destinosSonados = {}; 
+
+        window.irAPantalla = function(targetId) {
+            document.querySelectorAll('.btn-menu').forEach(b => {
+                if(b.getAttribute('data-target') === targetId) b.classList.add('activo');
+                else b.classList.remove('activo');
+            });
+            document.querySelectorAll('.pantalla').forEach(p => {
+                p.classList.remove('pantalla-activa');
+                p.style.display = 'none';
+            });
+            
+            const targetPanel = document.getElementById(targetId);
+            if (targetPanel) {
+                targetPanel.style.display = 'flex';
+                targetPanel.classList.add('pantalla-activa');
+            }
+
+            if (targetId === 'vista-vividas') renderizarPantallaRecuerdos();
+            if (targetId === 'vista-por-vivir') renderizarPantallaSonados();
+        };
+
+        function cargarMapa() {
+            const width = 800;
+            const height = 450;
+            const container = d3.select("#world-map");
+            container.selectAll("*").remove();
+
+            const svg = container.append("svg")
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .attr("id", "mapa-svg");
+
+            const g = svg.append("g").attr("id", "contenedor-mundo");
+
+            const zoom = d3.zoom()
+                .scaleExtent([1, 8]) 
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                    g.selectAll(".pais").style("stroke-width", 1.5 / event.transform.k + "px");
+                });
+
+            svg.call(zoom);
+
+            const projection = d3.geoMercator()
+                .scale(120) 
+                .translate([width / 2, height / 1.4]);
+
+            const path = d3.geoPath().projection(projection);
+
+            d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(function(data) {
+                
+                const indiceUSA = data.features.findIndex(f => f.id === "USA");
+                if (indiceUSA !== -1) {
+                    const usaFeature = data.features[indiceUSA];
+                    if (usaFeature.geometry && usaFeature.geometry.type === "MultiPolygon") {
+                        const poligonosUSA = [];
+                        const poligonosAlaska = [];
+                        usaFeature.geometry.coordinates.forEach(poligono => {
+                            const longitud = poligono[0][0][0];
+                            const latitud = poligono[0][0][1]; 
+                            if (latitud > 50) poligonosAlaska.push(poligono);
+                            else if (longitud < -130 || latitud < 24) {} 
+                            else poligonosUSA.push(poligono);
+                        });
+                        usaFeature.geometry.coordinates = poligonosUSA;
+                        if (poligonosAlaska.length > 0) {
+                            const alaskaFeature = JSON.parse(JSON.stringify(usaFeature)); 
+                            alaskaFeature.id = "USA-AK"; 
+                            alaskaFeature.properties.name = "Alaska";
+                            alaskaFeature.geometry.coordinates = poligonosAlaska;
+                            data.features.push(alaskaFeature);
+                        }
+                    }
+                }
+
+                g.selectAll("path")
+                    .data(data.features)
+                    .enter()
+                    .append("path")
+                    .attr("class", (d) => {
+                        const idPais = d.id;
+                        let clases = "pais";
+                        if (idPais) {
+                            if (paisesVisitados[idPais]) clases += " visitado";
+                            if (destinosSonados[idPais]) clases += " sonado";
+                        }
+                        return clases;
+                    })
+                    .attr("d", path)
+                    .on("mouseover", function(event, d) {
+                        const [x, y] = d3.pointer(event, document.getElementById("world-map"));
+                        const tooltip = d3.select("#tooltip");
+                        tooltip.select("#tooltip-nombre").text(d.properties.name);
+                        tooltip.style("left", x + "px").style("top", y + "px")
+                               .classed("tooltip-oculto", false).classed("tooltip-visible", true);
+                    })
+                    .on("mouseout", function() {
+                        d3.select("#tooltip").classed("tooltip-visible", false).classed("tooltip-oculto", true);
+                    })
+                    .on("click", function(event, d) {
+                        event.stopPropagation();
+                        
+                        const nombrePais = d.properties.name;
+                        const idPais = d.id; 
+                        const [x, y] = d3.pointer(event, document.getElementById("world-map"));
+                        const menu = d3.select("#menu-contextual");
+                        const elementoPais = d3.select(this);
+
+                        const esVisitado = elementoPais.classed("visitado");
+                        const esSonado = destinosSonados[idPais] ? true : false;
+                        const colorTitulo = esVisitado ? "#00BCD4" : (esSonado ? "#FFB300" : "#FF4081"); 
+                        
+                        // Menú Actualizado según instrucciones
+                        menu.html(`
+                            <div class="menu-header">
+                                <h3 class="menu-titulo" style="color: ${colorTitulo};">${nombrePais}</h3>
+                                <button id="cerrar-menu" class="btn-cerrar-menu">&times;</button>
+                            </div>
+                            <ul class="opciones-menu">
+                                ${idPais && idPais !== "-99" ? `<li id="opc-visitado"><i data-lucide="${esVisitado ? "circle" : "check-circle"}"></i> ${esVisitado ? "Por visitar" : "¡Ya estuve aquí!"}</li>` : ''}
+                                ${(idPais && idPais !== "-99" && esVisitado) ? `<li id="opc-recuerdos"><i data-lucide="camera"></i> Ver Recuerdos</li>` : ''}
+                                ${idPais && idPais !== "-99" ? `<li id="opc-planear"><i data-lucide="map"></i> Planear Aventura</li>` : ''}
+                                ${idPais && idPais !== "-99" ? `<li id="opc-explorar"><i data-lucide="search"></i> Explorar Zonas</li>` : ''}
+                            </ul>
+                        `);
+
+                        lucide.createIcons();
+                        menu.classed("menu-oculto", false).classed("menu-visible", true);
+
+                        const menuWidth = menu.node().offsetWidth;
+                        const menuHeight = menu.node().offsetHeight;
+                        const mapWidth = document.getElementById("world-map").offsetWidth;
+                        const mapHeight = document.getElementById("world-map").offsetHeight;
+
+                        let finalX = x + 15; 
+                        let finalY = y + 15;
+                        if (finalX + menuWidth > mapWidth) finalX = x - menuWidth - 15;
+                        if (finalY + menuHeight > mapHeight) finalY = y - menuHeight - 15;
+                        if (finalX < 10) finalX = 10;
+                        if (finalY < 10) finalY = 10;
+
+                        menu.style("left", finalX + "px").style("top", finalY + "px");
+
+                        if (idPais && idPais !== "-99") {
+                            d3.select("#opc-visitado").on("click", function() {
+                                if (!esVisitado) {
+                                    paisesVisitados[idPais] = { nombre: nombrePais, zonas: [] };
+                                    elementoPais.classed("visitado", true); 
+                                } else {
+                                    delete paisesVisitados[idPais];
+                                    elementoPais.classed("visitado", false); 
+                                }
+                                menu.classed("menu-visible", false).classed("menu-oculto", true);
+                            });
+
+                            // Nuevo Listener para "Ver Recuerdos"
+                            if (esVisitado) {
+                                d3.select("#opc-recuerdos").on("click", function() {
+                                    menu.classed("menu-visible", false).classed("menu-oculto", true);
+                                    irAPantalla('vista-vividas');
+                                    setTimeout(() => abrirAlbum(idPais), 50);
+                                });
+                            }
+
+                            // Planear aventura se queda fijo
+                            d3.select("#opc-planear").on("click", function() {
+                                if (!esSonado) {
+                                    destinosSonados[idPais] = { nombre: nombrePais, itinerario: [] };
+                                    elementoPais.classed("sonado", true);
+                                }
+                                menu.classed("menu-visible", false).classed("menu-oculto", true);
+                                
+                                irAPantalla('vista-por-vivir');
+                                setTimeout(() => abrirPlanificador(idPais), 50);
+                            });
+
+                            d3.select("#opc-explorar").on("click", function() {
+                                menu.classed("menu-visible", false).classed("menu-oculto", true);
+                                abrirPantallaPais(idPais, nombrePais, d);
+                            });
+                        }
+
+                        d3.select("#cerrar-menu").on("click", () => menu.classed("menu-visible", false).classed("menu-oculto", true));
+
+                        d3.select("body").on("click.menu-cerrar", function(e) {
+                            if (!menu.node().contains(e.target)) {
+                                menu.classed("menu-visible", false).classed("menu-oculto", true);
+                                d3.select("body").on("click.menu-cerrar", null);
+                            }
+                        });
+                    });
+            });
+        }
+
+        function abrirPantallaPais(idPais, nombrePais, geoData) {
+            const width = 800; const height = 450;
+            const container = d3.select("#world-map");
+            d3.select("#mapa-svg").style("display", "none");
+
+            const svgPais = container.append("svg").attr("viewBox", `0 0 ${width} ${height}`).attr("preserveAspectRatio", "xMidYMid meet").attr("id", "mapa-detalle");
+            const gDetalle = svgPais.append("g");
+            const centroide = d3.geoCentroid(geoData);
+            
+            const projection = d3.geoMercator().rotate([-centroide[0], 0]).fitExtent([[40, 40], [width - 40, height - 40]], geoData);
+            const path = d3.geoPath().projection(projection);
+
+            gDetalle.append("path").datum(geoData).attr("d", path).style("fill", "#B2EBF2").style("stroke", "#00BCD4").style("stroke-width", "4px").style("stroke-linejoin", "round");
+
+            container.append("h2").attr("id", "titulo-pais-explora").text(nombrePais).style("position", "absolute").style("top", "15px").style("left", "50%").style("transform", "translateX(-50%)").style("color", "#FF4081").style("margin", "0").style("background", "rgba(255, 255, 255, 0.9)").style("padding", "5px 25px").style("border-radius", "30px").style("border", "3px dashed #FF4081").style("box-shadow", "0 5px 15px rgba(255, 64, 129, 0.2)");
+
+            const msgCarga = container.append("div").attr("id", "msj-carga").style("position", "absolute").style("top", "80px").style("left", "50%").style("transform", "translateX(-50%)").style("background", "#FFFFFF").style("border", "3px solid #00BCD4").style("padding", "10px 25px").style("border-radius", "30px").style("color", "#00BCD4").style("font-weight", "bold").style("display", "flex").style("align-items", "center").style("gap", "10px").html("<i data-lucide='loader' class='spin'></i> Buscando zonas...");
+            lucide.createIcons();
+
+            if (!idPais || idPais === "-99") {
+                msgCarga.html("<i data-lucide='alert-circle'></i> Uy, ¡no hay mapa de esta zona!").style("color", "#FF4081").style("border-color", "#FF4081");
+                lucide.createIcons(); setTimeout(() => msgCarga.remove(), 3000);
+                mostrarBotonRegreso(); return;
+            }
+
+            const idApiGeoboundaries = idPais === "USA-AK" ? "USA" : idPais;
+            const urlAPI = `https://www.geoboundaries.org/api/current/gbOpen/${idApiGeoboundaries}/ADM1/`;
+            
+            fetch(urlAPI)
+                .then(res => res.json())
+                .then(apiData => {
+                    let geoUrl = apiData.simplifiedGeometryGeoJSON;
+                    if (geoUrl.includes('github.com')) geoUrl = geoUrl.replace('github.com', 'raw.githubusercontent.com').replace('/raw/', '/');
+                    return fetch(geoUrl);
+                })
+                .then(res => res.json())
+                .then(dataProvincias => {
+                    msgCarga.remove(); 
+                    if (idPais === "USA" || idPais === "USA-AK") {
+                        dataProvincias.features = dataProvincias.features.filter(prov => {
+                            const n = prov.properties.shapeName;
+                            const esAlaska = n === "Alaska";
+                            const esIsla = ["Hawaii", "Puerto Rico", "Guam", "American Samoa"].includes(n) || n.includes("Virgin") || n.includes("Mariana");
+                            return idPais === "USA-AK" ? esAlaska : (!esAlaska && !esIsla);
+                        });
+                    }
+
+                    gDetalle.selectAll(".provincia")
+                        .data(dataProvincias.features)
+                        .enter().append("path").attr("class", "provincia").attr("d", path)
+                        .style("fill", "#FFFFFF").style("stroke", "#FF4081").style("stroke-width", "1.5px").style("stroke-linejoin", "round").style("cursor", "pointer").style("transition", "fill 0.3s")
+                        .on("mouseover", function(event, d) {
+                            const [x, y] = d3.pointer(event, container.node());
+                            const tooltip = d3.select("#tooltip");
+                            tooltip.select("#tooltip-nombre").text(d.properties.shapeName || "Zona"); 
+                            tooltip.style("left", x + "px").style("top", (y - 15) + "px").classed("tooltip-oculto", false).classed("tooltip-visible", true);
+                            d3.select(this).style("fill", "#F8BBD0"); 
+                        })
+                        .on("mouseout", function() {
+                            d3.select("#tooltip").classed("tooltip-visible", false).classed("tooltip-oculto", true);
+                            d3.select(this).style("fill", "#FFFFFF"); 
+                        });
+                })
+                .catch(err => {
+                    msgCarga.html("<i data-lucide='alert-circle'></i> ¡Oh no! Zonas no disponibles.").style("color", "#FF4081").style("border-color", "#FF4081");
+                    lucide.createIcons(); setTimeout(() => msgCarga.remove(), 3000);
+                });
+
+            mostrarBotonRegreso();
+        }
+
+        function mostrarBotonRegreso() {
+            d3.select("#btn-volver-mapa").remove(); 
+            d3.select("#world-map").append("button").attr("id", "btn-volver-mapa")
+                .style("position", "absolute").style("bottom", "25px").style("left", "50%").style("transform", "translateX(-50%)").style("z-index", "100")
+                .style("background", "linear-gradient(45deg, #FF4081, #FF80AB)").style("border", "4px solid #FFFFFF").style("color", "white")
+                .style("padding", "15px 35px").style("border-radius", "50px").style("font-weight", "900").style("font-size", "1.1rem")
+                .style("font-family", "'Quicksand', sans-serif").style("cursor", "pointer").style("box-shadow", "0 0 20px rgba(255, 64, 129, 0.6)")
+                .html("✨ Volver al Mundo ✨")
+                .on("click", function() {
+                    d3.select("#mapa-detalle").remove(); d3.select("#titulo-pais-explora").remove();
+                    d3.select(this).remove(); d3.select("#tooltip").classed("tooltip-visible", false).classed("tooltip-oculto", true);
+                    d3.select("#mapa-svg").style("display", "block");
+                });
+        }
+
+        function renderizarPantallaSonados() {
+            const contenedor = document.getElementById('vista-por-vivir');
+            const idsPaises = Object.keys(destinosSonados);
+
+            contenedor.innerHTML = `
+                <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2><i data-lucide="heart"></i> Destinos por Vivir</h2>
+                    <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoDestino()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);">
+                        <i data-lucide="plus-circle"></i> Nueva Aventura
+                    </button>
+                </div>
+                <div id="selector-nuevo-destino" style="display:none; background: #FFF8F1; margin: 15px; padding: 20px; border-radius: 15px; border: 2px dashed var(--primary); animation: fadeIn 0.3s ease;">
+                    <h3 style="margin-top:0; color: var(--primary);">¿A dónde quieres ir?</h3>
+                    <p style="font-size: 0.9rem; color: #607D8B;">Selecciona tu destino final para empezar a planear:</p>
+                    <select id="select-pais-nuevo" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
+                        <option value="" disabled selected>Cargando países...</option>
+                    </select>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="confirmarNuevoDestino()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Crear Aventura</button>
+                        <button onclick="document.getElementById('selector-nuevo-destino').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
+                    </div>
+                </div>
+                <div class="contenedor-scroll" id="scroll-sonados"></div>
+            `;
+
+            const scrollArea = document.getElementById('scroll-sonados');
+
+            setTimeout(() => {
+                const select = document.getElementById('select-pais-nuevo');
+                if (select) {
+                    const paisesMapa = d3.selectAll('.pais').data();
+                    if (paisesMapa && paisesMapa.length > 0) {
+                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
+                        const listaOrdenada = paisesMapa
+                            .map(d => ({ id: d.id, nombre: d.properties.name }))
+                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+                        listaOrdenada.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.nombre;
+                            select.appendChild(opt);
+                        });
+                    }
+                }
+            }, 100);
+
+            if (idsPaises.length === 0) {
+                scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="compass"></i><p>No tienes aventuras planeadas todavía.</p></div>`;
+            } else {
+                const listaHTML = document.createElement('div');
+                listaHTML.className = 'lista-paises';
+                idsPaises.forEach(id => {
+                    const pais = destinosSonados[id];
+                    const numItems = pais.itinerario.length;
+                    const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+                    listaHTML.innerHTML += `
+                        <div class="tarjeta-pais">
+                            <div class="info-pais">
+                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
+                                <div><h3 class="nombre-pais-lista">${nombrePrincipal}</h3><span class="zonas-badge">${numItems} pasos</span></div>
+                            </div>
+                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
+                        </div>`;
+                });
+                scrollArea.appendChild(listaHTML);
+            }
+            lucide.createIcons();
+        }
+
+        window.renderizarPantallaRecuerdos = function() {
+            const contenedor = document.getElementById('vista-vividas');
+            const idsPaises = Object.keys(paisesVisitados);
+            
+            contenedor.innerHTML = `
+                <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2><i data-lucide="camera"></i> Galería de Recuerdos</h2>
+                    <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoRecuerdo()" style="background: var(--secondary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0, 188, 212, 0.3);">
+                        <i data-lucide="plus-circle"></i> Nuevo Recuerdo
+                    </button>
+                </div>
+                
+                <div id="selector-nuevo-recuerdo" style="display:none; background: #E1F5FE; margin: 15px; padding: 20px; border-radius: 15px; border: 2px dashed var(--secondary); animation: fadeIn 0.3s ease;">
+                    <h3 style="margin-top:0; color: var(--secondary);">¿Qué país visitaste?</h3>
+                    <p style="font-size: 0.9rem; color: #546E7A;">Selecciona el país para añadir tus fotos e historias:</p>
+                    <select id="select-pais-recuerdo" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
+                        <option value="" disabled selected>Cargando países...</option>
+                    </select>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="confirmarNuevoRecuerdo()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--secondary); color: white; font-weight: bold; cursor: pointer;">Añadir al Mapa</button>
+                        <button onclick="document.getElementById('selector-nuevo-recuerdo').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
+                    </div>
+                </div>
+
+                <div class="contenedor-scroll" id="scroll-recuerdos"></div>
+            `;
+
+            const scrollArea = document.getElementById('scroll-recuerdos');
+
+            // Cargar lista de países en el selector
+            setTimeout(() => {
+                const select = document.getElementById('select-pais-recuerdo');
+                if (select) {
+                    const paisesMapa = d3.selectAll('.pais').data();
+                    if (paisesMapa && paisesMapa.length > 0) {
+                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
+                        const listaOrdenada = paisesMapa
+                            .map(d => ({ id: d.id, nombre: d.properties.name }))
+                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+                        listaOrdenada.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.nombre;
+                            select.appendChild(opt);
+                        });
+                    }
+                }
+            }, 100);
+
+            if (idsPaises.length === 0) {
+                scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="map"></i><p>Aún no has marcado países visitados.</p></div>`;
+            } else {
+                const listaHTML = document.createElement('div');
+                listaHTML.className = 'lista-paises';
+                idsPaises.forEach(id => {
+                    const pais = paisesVisitados[id];
+                    const numAlbumes = (pais.albumes ? pais.albumes.length : 0) + (pais.historias ? pais.historias.length : 0);
+                    listaHTML.innerHTML += `
+                        <div class="tarjeta-pais">
+                            <div class="info-pais">
+                                <div class="icono-bandera"><i data-lucide="map-pin"></i></div>
+                                <div><h3 class="nombre-pais-lista">${pais.nombre}</h3><span class="zonas-badge">${numAlbumes} memorias</span></div>
+                            </div>
+                            <button class="btn-accion-pais" onclick="abrirAlbum('${id}')">Ver Álbumes <i data-lucide="chevron-right"></i></button>
+                        </div>`;
+                });
+                scrollArea.appendChild(listaHTML);
+            }
+            lucide.createIcons();
+        }
+
+        window.mostrarSelectorNuevoRecuerdo = function() {
+            document.getElementById('selector-nuevo-recuerdo').style.display = 'block';
+        };
+
+        window.confirmarNuevoRecuerdo = function() {
+            const select = document.getElementById('select-pais-recuerdo');
+            const id = select.value;
+            const nombre = select.options[select.selectedIndex].text;
+            if (!id) return;
+
+            // Si el país no estaba visitado, lo añadimos y pintamos en el mapa
+            if (!paisesVisitados[id]) {
+                paisesVisitados[id] = { 
+                    nombre: nombre, 
+                    albumes: [], 
+                    historias: [],
+                    musica: null
+                };
+                d3.select(`.pais[id="${id}"]`).classed('visitado', true);
+            }
+            
+            document.getElementById('selector-nuevo-recuerdo').style.display = 'none';
+            abrirAlbum(id);
+        };
+
+        window.abrirAlbum = function(idPais) {
+            const pais = paisesVisitados[idPais];
+            if (!pais.albumes) pais.albumes = [];
+            if (!pais.historias) pais.historias = [];
+            
+            const scrollArea = document.getElementById('scroll-recuerdos');
+            const tieneMusica = !!pais.musica;
+            
+            scrollArea.innerHTML = `
+                <div class="cabecera-detalle" style="justify-content: flex-start; gap: 15px; margin-bottom: 5px;">
+                    <button class="btn-volver" onclick="renderizarPantallaRecuerdos()" title="Volver"><i data-lucide="arrow-left"></i></button>
+                    <h2 style="margin:0;">Memorias de ${pais.nombre}</h2>
+                </div>
+
+                <!-- SECCIÓN BANDA SONORA (BOTÓN DIRECTO) -->
+                <div id="seccion-musica" style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 5px solid #3b82f6;">
+                    <div id="vista-musica-guardada" style="display: ${tieneMusica ? 'flex' : 'none'}; align-items: center; justify-content: space-between; gap: 10px;">
+                        <a href="${pais.musica}" target="_blank" style="flex: 1; background: #3b82f6; color: white; text-decoration: none; padding: 12px; border-radius: 10px; font-weight: bold; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">
+                            <i data-lucide="play-circle"></i> MÚSICA PARA LA MEMORIA
+                        </a>
+                        <button onclick="cambiarMusica('${idPais}')" title="Cambiar enlace" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; padding: 12px; border-radius: 10px; cursor: pointer;">
+                            <i data-lucide="refresh-cw" style="width:18px;"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="input-musica" style="display: ${tieneMusica ? 'none' : 'flex'}; gap: 10px; align-items: center;">
+                        <div style="flex:1; position:relative;">
+                            <i data-lucide="music" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; color:#94a3b8;"></i>
+                            <input type="text" id="url-musica" placeholder="Pega el link de la canción de este viaje..." style="width:100%; padding:10px 10px 10px 35px; border-radius:8px; border:1px solid #cbd5e1; font-size: 0.85rem; outline: none;">
+                        </div>
+                        <button onclick="guardarMusica('${idPais}')" style="background: #3b82f6; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">
+                            Guardar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SELECTOR DE SECCIÓN -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; background: #f1f5f9; padding: 5px; border-radius: 12px;">
+                    <button id="tab-drive" onclick="cambiarSeccionRecuerdos('drive', '${idPais}')" style="flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background: var(--secondary); color:white;">
+                        <i data-lucide="folder" style="width:16px; vertical-align:middle;"></i> Drive
+                    </button>
+                    <button id="tab-historias" onclick="cambiarSeccionRecuerdos('historias', '${idPais}')" style="flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:transparent; color:#546E7A;">
+                        <i data-lucide="book-open" style="width:16px; vertical-align:middle;"></i> Historias
+                    </button>
+                </div>
+
+                <!-- FORMULARIO DRIVE -->
+                <div id="form-drive" style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E1F5FE;">
+                    <h4 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle"></i> Agregar Nueva Carpeta</h4>
+                    <div style="display:flex; flex-direction: column; gap:10px;">
+                        <input type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Fotos del Hotel)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="url-carpeta-drive" placeholder="Link de Drive..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                            <button onclick="agregarCarpetaDrive('${idPais}')" style="background: var(--secondary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold;"><i data-lucide="save"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMULARIO HISTORIAS -->
+                <div id="form-historias" style="display:none; background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #FCE4EC;">
+                    <h4 style="margin-top:0; color: var(--primary); display:flex; align-items:center; gap:8px;"><i data-lucide="pen-tool"></i> Escribir una Anécdota</h4>
+                    <div style="display:flex; flex-direction: column; gap:10px;">
+                        <input type="text" id="titulo-historia" placeholder="Título de la historia..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                        <input type="text" id="img-historia" placeholder="URL de la imagen de portada..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                        <textarea id="texto-historia" placeholder="Cuéntame qué pasó en este viaje..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
+                        <button onclick="agregarHistoria('${idPais}')" style="background: var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold; align-self: flex-end;">Guardar Historia</button>
+                    </div>
+                </div>
+
+                <div id="lista-memorias-guardadas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                    <!-- Se llena con JS -->
+                </div>
+            `;
+
+            actualizarVistaAlbumes(idPais);
+            lucide.createIcons();
+        };
+
+        window.extraerIDYoutube = function(url) {
+            const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[7].length === 11) ? match[7] : null;
+        };
+
+        window.guardarMusica = function(idPais) {
+            const urlInput = document.getElementById('url-musica');
+            const url = urlInput.value.trim();
+            if (!url) return;
+            
+            // Verificación básica de URL
+            if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+                alert("Por favor, ingresa un enlace válido de YouTube.");
+                return;
+            }
+            
+            paisesVisitados[idPais].musica = url;
+            abrirAlbum(idPais); 
+        };
+
+        window.cambiarMusica = function(idPais) {
+            paisesVisitados[idPais].musica = null;
+            abrirAlbum(idPais);
+        };
+
+        window.cambiarSeccionRecuerdos = function(tipo, idPais) {
+            const btnDrive = document.getElementById('tab-drive');
+            const btnHistorias = document.getElementById('tab-historias');
+            const formDrive = document.getElementById('form-drive');
+            const formHistorias = document.getElementById('form-historias');
+
+            if (tipo === 'drive') {
+                btnDrive.style.background = 'var(--secondary)'; btnDrive.style.color = 'white';
+                btnHistorias.style.background = 'transparent'; btnHistorias.style.color = '#546E7A';
+                formDrive.style.display = 'block';
+                formHistorias.style.display = 'none';
+            } else {
+                btnHistorias.style.background = 'var(--primary)'; btnHistorias.style.color = 'white';
+                btnDrive.style.background = 'transparent'; btnDrive.style.color = '#546E7A';
+                formDrive.style.display = 'none';
+                formHistorias.style.display = 'block';
+            }
+            actualizarVistaAlbumes(idPais, tipo);
+        };
+
+        window.actualizarVistaAlbumes = function(idPais, vista = 'drive') {
+            const contenedor = document.getElementById('lista-memorias-guardadas');
+            const pais = paisesVisitados[idPais];
+            contenedor.innerHTML = '';
+
+            if (vista === 'drive') {
+                const albumes = pais.albumes || [];
+                if (albumes.length === 0) {
+                    contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="folder-x" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>No hay carpetas compartidas aún.</p></div>';
+                } else {
+                    albumes.forEach((album, index) => {
+                        contenedor.innerHTML += `
+                            <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 5px solid var(--secondary);">
+                                <div style="padding: 15px;">
+                                    <div style="display:flex; justify-content: space-between;">
+                                        <h3 style="margin:0; font-size: 1rem;">${album.nombre}</h3>
+                                        <button onclick="eliminarMemoria('${idPais}', ${index}, 'drive')" style="background:none; border:none; color: #EF5350; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
+                                    </div>
+                                    <a href="${album.url}" target="_blank" style="display:block; margin-top:15px; text-align:center; background:#DB4437; color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.8rem;">ABRIR DRIVE</a>
+                                </div>
+                            </div>`;
+                    });
+                }
+            } else {
+                const historias = pais.historias || [];
+                if (historias.length === 0) {
+                    contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="scroll" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>Aún no has escrito historias.</p></div>';
+                } else {
+                    historias.forEach((h, index) => {
+                        contenedor.innerHTML += `
+                            <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display:flex; flex-direction:column;">
+                                <div style="height:120px; background: #eee url('${h.img || 'https://via.placeholder.com/300x150?text=Sin+Imagen'}') center/cover no-repeat;"></div>
+                                <div style="padding: 15px;">
+                                    <div style="display:flex; justify-content: space-between; align-items:center;">
+                                        <h3 style="margin:0; font-size: 1rem; color: var(--primary);">${h.titulo}</h3>
+                                        <button onclick="eliminarMemoria('${idPais}', ${index}, 'historia')" style="background:none; border:none; color: #EF5350; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
+                                    </div>
+                                    <p style="font-size: 0.85rem; color: #546E7A; margin-top:10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${h.texto}</p>
+                                    <button onclick="leerHistoria('${idPais}', ${index})" style="width:100%; margin-top:10px; padding:8px; border-radius:8px; border:1px solid var(--primary); color:var(--primary); background:transparent; font-weight:bold; cursor:pointer;">Leer Completa</button>
+                                </div>
+                            </div>`;
+                    });
+                }
+            }
+            lucide.createIcons();
+        }
+
+        window.agregarHistoria = function(idPais) {
+            const titulo = document.getElementById('titulo-historia').value.trim();
+            const img = document.getElementById('img-historia').value.trim();
+            const texto = document.getElementById('texto-historia').value.trim();
+
+            if (!titulo || !texto) { alert("Tu historia necesita al menos un título y contenido."); return; }
+
+            paisesVisitados[idPais].historias.push({ titulo, img, texto, fecha: new Date().toLocaleDateString() });
+            cambiarSeccionRecuerdos('historias', idPais);
+        };
+
+        window.leerHistoria = function(idPais, index) {
+            const h = paisesVisitados[idPais].historias[index];
+            const modal = document.createElement('div');
+            modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px;";
+            modal.innerHTML = `
+                <div style="background:white; width:100%; max-width:600px; max-height:90vh; border-radius:20px; overflow-y:auto; position:relative; padding-bottom:30px;">
+                    <button onclick="this.parentElement.parentElement.remove()" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; font-weight:bold; z-index:10;">X</button>
+                    <div style="width:100%; height:250px; background:url('${h.img}') center/cover no-repeat;"></div>
+                    <div style="padding:30px;">
+                        <span style="color:var(--primary); font-weight:bold; font-size:0.8rem;">${h.fecha}</span>
+                        <h2 style="margin-top:5px; color: #263238;">${h.titulo}</h2>
+                        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+                        <p style="white-space: pre-wrap; line-height:1.6; color:#455A64;">${h.texto}</p>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        };
+
+        window.eliminarMemoria = function(idPais, index, tipo) {
+            if (confirm("¿Seguro que quieres borrar esto?")) {
+                if (tipo === 'drive') {
+                    paisesVisitados[idPais].albumes.splice(index, 1);
+                    actualizarVistaAlbumes(idPais, 'drive');
+                } else {
+                    paisesVisitados[idPais].historias.splice(index, 1);
+                    actualizarVistaAlbumes(idPais, 'historias');
+                }
+            }
+        };
+
+        window.agregarCarpetaDrive = function(idPais) {
+            const nombre = document.getElementById('nombre-carpeta-drive').value.trim();
+            const url = document.getElementById('url-carpeta-drive').value.trim();
+            if (!nombre || !url) { alert("Faltan datos."); return; }
+            if (!url.includes('drive.google.com')) { alert("Link no válido."); return; }
+            paisesVisitados[idPais].albumes.push({ nombre, url });
+            actualizarVistaAlbumes(idPais, 'drive');
+        };
+        // Función para borrar todo el país de la galería y del mapa
+        window.borrarRecuerdoCompleto = function(idPais) {
+            const confirmacion = confirm(`¿Estás seguro de que quieres borrar todos los recuerdos de ${paisesVisitados[idPais].nombre}? Esto eliminará el país del mapa y borrará todas tus historias y álbumes.`);
+            
+            if (confirmacion) {
+                // Eliminar del objeto de estado
+                delete paisesVisitados[idPais];
+                
+                // Actualizar el mapa visualmente (quitar clase CSS)
+                d3.select(`.pais[id="${idPais}"]`).classed('visitado', false);
+                
+                // Volver a la lista general
+                renderizarPantallaRecuerdos();
+            }
+        };
+
+        window.mostrarSelectorNuevoDestino = function() {
+            document.getElementById('selector-nuevo-destino').style.display = 'block';
+        };
+
+        window.confirmarNuevoDestino = function() {
+            const select = document.getElementById('select-pais-nuevo');
+            const id = select.value;
+            const nombre = select.options[select.selectedIndex].text;
+            if (!id) return;
+            document.getElementById('selector-nuevo-destino').style.display = 'none';
+            if (!destinosSonados[id]) {
+                destinosSonados[id] = { nombre: nombre, itinerario: [], escalas: [] };
+                d3.select(`.pais[id="${id}"]`).classed('sonado', true);
+            }
+            abrirPlanificador(id);
+        };
+
+        window.abrirPlanificador = function(idPais) {
+            const pais = destinosSonados[idPais];
+            const scrollArea = document.getElementById('scroll-sonados');
+            scrollArea.innerHTML = `
+                <div class="cabecera-detalle">
+                    <button class="btn-volver" onclick="renderizarPantallaSonados()"><i data-lucide="arrow-left"></i></button>
+                    <h2 style="margin:0;">Plan: ${pais.nombre}</h2>
+                    <button class="btn-borrar-itinerario" onclick="borrarItinerarioCompleto('${idPais}')" id="btn-borrar-iti"><i data-lucide="trash-2"></i></button>
+                </div>
+                <div class="panel-creacion">
+                    <div class="botones-tipos">
+                        <button class="btn-tipo-item" onclick="mostrarFormularioItinerario('viaje', this)"><i data-lucide="bus"></i> Viaje</button>
+                        <button class="btn-tipo-item" onclick="mostrarFormularioItinerario('hospedaje', this)"><i data-lucide="hotel"></i> Cama</button>
+                        <button class="btn-tipo-item" onclick="mostrarFormularioItinerario('aventura', this)"><i data-lucide="mountain"></i> Plan</button>
+                        <button class="btn-tipo-item" onclick="mostrarFormularioItinerario('restaurante', this)"><i data-lucide="utensils"></i> Comer</button>
+                    </div>
+                    <div id="contenedor-formularios"></div>
+                </div>
+                <div class="linea-tiempo" id="linea-tiempo-${idPais}"></div>
+            `;
+            lucide.createIcons();
+            dibujarItinerario(idPais);
+        };
+
+        window.dibujarItinerario = function(idPais) {
+            const timeline = document.getElementById(`linea-tiempo-${idPais}`);
+            const items = destinosSonados[idPais].itinerario;
+            timeline.innerHTML = items.length === 0 ? '<p style="color:#999; padding:20px;">No hay planes aún.</p>' : '';
+            items.forEach(item => {
+                timeline.innerHTML += `
+                    <div class="item-timeline ${item.tipo}">
+                        <div class="item-header">
+                            <span style="font-weight:bold;">${item.tipo.toUpperCase()}</span>
+                            <button class="btn-eliminar-item" onclick="eliminarItemItinerario('${idPais}', ${item.id})"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="item-detalles">${item.hotel || item.lugar || item.plato || (item.medio + ' a ' + item.destino)}</div>
+                    </div>`;
+            });
+            lucide.createIcons();
+        };
+
+        window.eliminarItemItinerario = function(idPais, idItem) {
+            destinosSonados[idPais].itinerario = destinosSonados[idPais].itinerario.filter(i => i.id !== idItem);
+            dibujarItinerario(idPais);
+        };
+        
+        window.borrarItinerarioCompleto = function(idPais) {
+            delete destinosSonados[idPais];
+            d3.select(`.pais[id="${idPais}"]`).classed('sonado', false);
+            renderizarPantallaSonados();
+        };
+       function renderizarPantallaSonados() {
+            const contenedor = document.getElementById('vista-por-vivir');
+            const idsPaises = Object.keys(destinosSonados);
+
+            contenedor.innerHTML = `
+                <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2><i data-lucide="heart"></i> Destinos por Vivir</h2>
+                    <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoDestino()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);">
+                        <i data-lucide="plus-circle"></i> Nueva Aventura
+                    </button>
+                </div>
+                <div id="selector-nuevo-destino" style="display:none; background: #FFF8F1; margin: 15px; padding: 20px; border-radius: 15px; border: 2px dashed var(--primary); animation: fadeIn 0.3s ease;">
+                    <h3 style="margin-top:0; color: var(--primary);">¿A dónde quieres ir?</h3>
+                    <p style="font-size: 0.9rem; color: #607D8B;">Selecciona tu destino final para empezar a planear:</p>
+                    <select id="select-pais-nuevo" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
+                        <option value="" disabled selected>Cargando países...</option>
+                    </select>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="confirmarNuevoDestino()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Crear Aventura</button>
+                        <button onclick="document.getElementById('selector-nuevo-destino').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
+                    </div>
+                </div>
+                <div class="contenedor-scroll" id="scroll-sonados"></div>
+            `;
+
+            const scrollArea = document.getElementById('scroll-sonados');
+
+            // Cargar países dinámicamente desde los datos del mapa (D3)
+            setTimeout(() => {
+                const select = document.getElementById('select-pais-nuevo');
+                if (select) {
+                    const paisesMapa = d3.selectAll('.pais').data();
+                    
+                    if (paisesMapa && paisesMapa.length > 0) {
+                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
+                        const listaOrdenada = paisesMapa
+                            .map(d => ({ id: d.id, nombre: d.properties.name }))
+                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+                        listaOrdenada.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.nombre;
+                            select.appendChild(opt);
+                        });
+                    } else {
+                        select.innerHTML = '<option value="" disabled selected>Error cargando mapa...</option>';
+                    }
+                }
+            }, 100);
+
+            if (idsPaises.length === 0) {
+                scrollArea.innerHTML = `
+                    <div class="mensaje-vacio">
+                        <i data-lucide="compass"></i>
+                        <p>No tienes aventuras planeadas todavía.</p>
+                        <p style="font-size: 1rem; font-weight: 500;">Haz clic en "Nueva Aventura" o elige un país en el mapa.</p>
+                    </div>
+                `;
+            } else {
+                const listaHTML = document.createElement('div');
+                listaHTML.className = 'lista-paises';
+
+                idsPaises.forEach(id => {
+                    const pais = destinosSonados[id];
+                    const numItems = pais.itinerario.length;
+                    const textoItems = numItems > 0 ? `${numItems} pasos planeados` : 'Recién soñando...';
+                    const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+
+                    let nombreVisual = `<span style="color: #FF4081; font-weight: 900;">${nombrePrincipal}</span>`;
+                    if (pais.escalas && pais.escalas.length > 0) {
+                        nombreVisual += ` <span style="font-size: 0.85rem; color: #90A4AE; font-weight: 500;">(${pais.escalas.join(' - ').toUpperCase()})</span>`;
+                    }
+
+                    listaHTML.innerHTML += `
+                        <div class="tarjeta-pais">
+                            <div class="info-pais">
+                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
+                                <div>
+                                    <h3 class="nombre-pais-lista">${nombreVisual}</h3>
+                                    <span class="zonas-badge" style="background: #FFF3E0; color: #E65100;">${textoItems}</span>
+                                </div>
+                            </div>
+                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">
+                                Ver Itinerario <i data-lucide="calendar"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+                scrollArea.appendChild(listaHTML);
+            }
+            lucide.createIcons();
+        }
+
+        window.mostrarSelectorNuevoDestino = function() {
+            const el = document.getElementById('selector-nuevo-destino');
+            el.style.display = 'block';
+            el.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.confirmarNuevoDestino = function() {
+            const select = document.getElementById('select-pais-nuevo');
+            const id = select.value;
+            const nombre = select.options[select.selectedIndex].text;
+
+            if (!id || id === "") return;
+
+            // Ocultar el panel de selección para que no estorbe
+            document.getElementById('selector-nuevo-destino').style.display = 'none';
+
+            if (!destinosSonados[id]) {
+                destinosSonados[id] = {
+                    nombre: nombre,
+                    destinoFinal: nombre,
+                    escalas: [],
+                    itinerario: []
+                };
+                
+                // Pintar el mapa
+                d3.select(`.pais[id="${id}"]`).classed('sonado', true);
+            }
+
+            abrirPlanificador(id);
+        };
+
+        window.abrirPlanificador = function(idPais) {
+            const pais = destinosSonados[idPais];
+            const scrollArea = document.getElementById('scroll-sonados');
+            
+            const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+
+            let nombreVisual = `<span style="color: #FF4081;">${nombrePrincipal}</span>`;
+            if (pais.escalas && pais.escalas.length > 0) {
+                nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${pais.escalas.join(' - ').toUpperCase()})</span>`;
+            }
+
+            scrollArea.innerHTML = `
+                <div class="cabecera-detalle">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <button class="btn-volver" onclick="renderizarPantallaSonados()" title="Volver a la lista">
+                            <i data-lucide="arrow-left"></i>
+                        </button>
+                        <h2 style="font-size: 1.6rem; margin:0;">ITINERARIO: ${nombreVisual} 🌍</h2>
+                    </div>
+                    
+                    <button id="btn-borrar-iti" class="btn-borrar-itinerario" onclick="borrarItinerarioCompleto('${idPais}')" data-confirm="false" title="Eliminar todo el itinerario de este país">
+                        <i data-lucide="trash-2"></i> Borrar Todo
+                    </button>
+                </div>
+                
+                <div class="panel-creacion">
+                    <h3 style="margin-top:0; color: #455A64;">Agregar nuevo paso:</h3>
+                    <div class="botones-tipos">
+                        <button class="btn-tipo-item" onclick="mostrarFormularioItinerario('viaje', this)"><i data-lucide="bus"></i> Viaje</button>
+                        <button class="btn-tipo-item" onclick="manual_Hospedaje(this)"><i data-lucide="hotel"></i> Hospedaje</button>
+                        <button class="btn-tipo-item" onclick="manual_Aventura(this)"><i data-lucide="mountain"></i> Aventura</button>
+                        <button class="btn-tipo-item" onclick="manual_Restaurante(this)"><i data-lucide="utensils"></i> Restaurante</button>
+                    </div>
+                    <div id="contenedor-formularios"></div>
+                </div>
+
+                <div class="linea-tiempo" id="linea-tiempo-${idPais}"></div>
+            `;
+            
+            lucide.createIcons();
+            dibujarItinerario(idPais);
+        };
+
+        window.manual_Hospedaje = (btn) => mostrarFormularioItinerario('hospedaje', btn);
+        window.manual_Aventura = (btn) => mostrarFormularioItinerario('aventura', btn);
+        window.manual_Restaurante = (btn) => mostrarFormularioItinerario('restaurante', btn);
+
+        window.borrarItinerarioCompleto = function(idPais) {
+            const btn = document.getElementById('btn-borrar-iti');
+            if (btn.dataset.confirm === 'true') {
+                delete destinosSonados[idPais];
+                d3.selectAll('.pais').classed('sonado', function(d) { return destinosSonados[d.id] ? true : false; });
+                renderizarPantallaSonados();
+            } else {
+                btn.dataset.confirm = 'true';
+                btn.innerHTML = '<i data-lucide="alert-triangle"></i> ¿Seguro?';
+                btn.style.background = '#F44336';
+                btn.style.color = 'white';
+                lucide.createIcons();
+                setTimeout(() => {
+                    if(document.getElementById('btn-borrar-iti')) {
+                        btn.dataset.confirm = 'false';
+                        btn.innerHTML = '<i data-lucide="trash-2"></i> Borrar Todo';
+                        btn.style.background = '#FFEBEE';
+                        btn.style.color = '#F44336';
+                        lucide.createIcons();
+                    }
+                }, 3000);
+            }
+        };
+
+        window.mostrarFormularioItinerario = function(tipo, btn) {
+            document.querySelectorAll('.btn-tipo-item').forEach(b => b.classList.remove('seleccionado'));
+            btn.classList.add('seleccionado');
+
+            const contenedor = document.getElementById('contenedor-formularios');
+            let formHTML = `<div class="formulario-itinerario activo" id="form-${tipo}">`;
+
+            if (tipo === 'viaje') {
+                const paisesMapa = d3.selectAll('.pais').data();
+                const paisesSelect = paisesMapa
+                    .map(d => d.properties.name)
+                    .sort((a, b) => a.localeCompare(b))
+                    .map(name => `<option value="${name}">${name}</option>`)
+                    .join('');
+
+                formHTML += `
+                    <div class="campo-form"><label>Medio de transporte</label>
+                        <select id="input-viaje-medio"><option value="Micro">🚌 Micro / Autobús</option><option value="Auto">🚗 Auto / Alquiler</option><option value="Avión">✈️ Avión</option><option value="Tren">🚂 Tren</option></select>
+                    </div>
+                    <div class="campo-form"><label>País de Escala</label>
+                        <select id="input-viaje-destino"><option value="" disabled selected>Selecciona un país...</option>${paisesSelect}</select>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="campo-form" style="flex: 1;"><label>Horas</label><input type="number" id="input-viaje-horas" placeholder="0"></div>
+                        <div class="campo-form" style="flex: 1;"><label>Minutos</label><input type="number" id="input-viaje-minutos" placeholder="0"></div>
+                    </div>
+                    <div class="campo-form"><label>Costo Pasaje ($)</label><input type="number" id="input-viaje-costo" placeholder="Ej. 150000"></div>
+                `;
+            } else if (tipo === 'hospedaje') {
+                formHTML += `
+                    <div class="campo-form"><label>Nombre del Hotel</label><input type="text" id="input-hospedaje-nombre" placeholder="Ej. Hotel Copacabana"></div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="campo-form" style="flex: 1;"><label>Noches</label><input type="number" id="input-hospedaje-noches" placeholder="Ej. 5"></div>
+                        <div class="campo-form" style="flex: 1;"><label>Precio Total ($)</label><input type="number" id="input-hospedaje-costo" placeholder="Ej. 80000"></div>
+                    </div>
+                `;
+            } else if (tipo === 'aventura') {
+                formHTML += `
+                    <div class="campo-form"><label>Lugar a visitar</label><input type="text" id="input-aventura-lugar" placeholder="Ej. Cristo Redentor"></div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="campo-form" style="flex: 1;"><label>Día</label><input type="text" id="input-aventura-dia" placeholder="Ej. Día 2"></div>
+                        <div class="campo-form" style="flex: 1;"><label>Precio ($)</label><input type="number" id="input-aventura-costo" placeholder="0"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="campo-form" style="flex: 1;"><label>Llegada</label><input type="time" id="input-aventura-llegada"></div>
+                        <div class="campo-form" style="flex: 1;"><label>Partida</label><input type="time" id="input-aventura-partida"></div>
+                    </div>
+                `;
+            } else if (tipo === 'restaurante') {
+                formHTML += `
+                    <div class="campo-form"><label>Plato o Lugar</label><input type="text" id="input-rest-plato" placeholder="Ej. Feijoada"></div>
+                    <div class="campo-form"><label>Precio estimado ($)</label><input type="number" id="input-rest-precio" placeholder="Ej. 25000"></div>
+                `;
+            }
+
+            const idPais = document.querySelector('.linea-tiempo').id.replace('linea-tiempo-', '');
+            formHTML += `<button class="btn-guardar-item" onclick="guardarItemItinerario('${idPais}', '${tipo}')">Añadir al Itinerario ✨</button></div>`;
+            contenedor.innerHTML = formHTML;
+        };
+
+        window.guardarItemItinerario = function(idPais, tipo) {
+            let nuevoItem = { tipo: tipo, id: Date.now() };
+            const dataPais = destinosSonados[idPais];
+            if (!dataPais.destinoFinal) dataPais.destinoFinal = dataPais.nombre;
+            if (!dataPais.escalas) dataPais.escalas = [];
+
+            if (tipo === 'viaje') {
+                nuevoItem.medio = document.getElementById('input-viaje-medio').value;
+                const escalaValor = document.getElementById('input-viaje-destino').value;
+                nuevoItem.destino = escalaValor;
+                nuevoItem.horas = document.getElementById('input-viaje-horas').value || '0';
+                nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
+                nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
+                const escN = escalaValor ? escalaValor.toUpperCase() : "";
+                if (escN && escN !== dataPais.destinoFinal.toUpperCase() && !dataPais.escalas.includes(escN)) {
+                    dataPais.escalas.push(escN);
+                }
+            } else if (tipo === 'hospedaje') {
+                nuevoItem.hotel = document.getElementById('input-hospedaje-nombre').value || 'Alojamiento';
+                nuevoItem.noches = document.getElementById('input-hospedaje-noches').value || '1';
+                nuevoItem.costo = document.getElementById('input-hospedaje-costo').value || '0';
+            } else if (tipo === 'aventura') {
+                nuevoItem.lugar = document.getElementById('input-aventura-lugar').value || 'Aventura';
+                nuevoItem.dia = document.getElementById('input-aventura-dia').value || 'Día 1';
+                nuevoItem.costo = document.getElementById('input-aventura-costo').value || '0';
+                nuevoItem.llegada = document.getElementById('input-aventura-llegada').value;
+                nuevoItem.partida = document.getElementById('input-aventura-partida').value;
+            } else if (tipo === 'restaurante') {
+                nuevoItem.plato = document.getElementById('input-rest-plato').value || 'Restaurante';
+                nuevoItem.precio = document.getElementById('input-rest-precio').value || '0';
+            }
+
+            destinosSonados[idPais].itinerario.push(nuevoItem);
+            document.getElementById('contenedor-formularios').innerHTML = '';
+            document.querySelectorAll('.btn-tipo-item').forEach(b => b.classList.remove('seleccionado'));
+            dibujarItinerario(idPais);
+        };
+
+        window.eliminarItemItinerario = function(idPais, idItem) {
+            destinosSonados[idPais].itinerario = destinosSonados[idPais].itinerario.filter(i => i.id !== idItem);
+            dibujarItinerario(idPais);
+        }
+
+        window.dibujarItinerario = function(idPais) {
+            const timeline = document.getElementById(`linea-tiempo-${idPais}`);
+            const items = destinosSonados[idPais].itinerario;
+            timeline.innerHTML = '';
+            if (items.length === 0) {
+                timeline.innerHTML = `<p style="color:#90A4AE; padding-left: 20px;">Itinerario vacío.</p>`;
+                return;
+            }
+            items.forEach(item => {
+                let icono = 'circle'; let titulo = ''; let detalles = '';
+                if (item.tipo === 'viaje') { icono = 'bus'; titulo = `Viaje en ${item.medio}`; detalles = `Escala: ${item.destino}<br>Costo: $${item.costo}`; }
+                else if (item.tipo === 'hospedaje') { icono = 'hotel'; titulo = item.hotel; detalles = `${item.noches} noches - Total: $${item.costo}`; }
+                else if (item.tipo === 'aventura') { icono = 'mountain'; titulo = item.lugar; detalles = `Día: ${item.dia} ($${item.costo})<br>${item.llegada || ''} - ${item.partida || ''}`; }
+                else if (item.tipo === 'restaurante') { icono = 'utensils'; titulo = item.plato; detalles = `Gasto: $${item.precio}`; }
+                timeline.innerHTML += `
+                    <div class="item-timeline ${item.tipo}"><div class="punto-timeline"></div>
+                        <div class="item-header"><h4 class="item-titulo"><i data-lucide="${icono}"></i> ${titulo}</h4>
+                        <button class="btn-eliminar-item" onclick="eliminarItemItinerario('${idPais}', ${item.id})"><i data-lucide="trash-2"></i></button></div>
+                        <div class="item-detalles">${detalles}</div>
+                    </div>`;
+            });
+            lucide.createIcons();
+        };
+        document.addEventListener("DOMContentLoaded", cargarMapa);
+    </script>
+</body>
+</html>
