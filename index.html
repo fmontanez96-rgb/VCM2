@@ -301,7 +301,7 @@
 
             const path = d3.geoPath().projection(projection);
 
-            d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(function(data) {
+            d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.json").then(function(data) {
                 
                 const indiceUSA = data.features.findIndex(f => f.id === "USA");
                 if (indiceUSA !== -1) {
@@ -513,7 +513,7 @@ else {
         .style("stroke-width","3");
 
     // Cargar provincias del mundo
-    d3.json("mapas/estados_provincias.geojson").then(function(data){
+    d3.json("mapas/estados_provincias.json").then(function(data){
 
         // FILTRAR SOLO PROVINCIAS DEL PAIS
         const provincias = data.features.filter(p =>
@@ -898,7 +898,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
             contenedor.style.display = 'block';
             selectCiudad.innerHTML = '<option value="" disabled selected>Buscando Ciudades...</option>';
 
-            d3.json("mapas/estados_provincias.geojson").then(function(data) {
+            d3.json("mapas/estados_provincias.json").then(function(data) {
                 const ciudades = data.features.filter(p => p.properties.admin === nombrePais);
                 selectCiudad.innerHTML = '<option value="" disabled selected>¿Ciudad?</option>';
                 
@@ -1005,7 +1005,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
             lucide.createIcons();
             
             // Cargamos las provincias bien calientes desde nuestro archivo JSON
-            d3.json("mapas/estados_provincias.geojson").then(function(data){
+            d3.json("mapas/estados_provincias.json").then(function(data){
                 const provincias = data.features.filter(p => p.properties.admin === pais.nombre);
                 const select = document.getElementById('select-nueva-ciudad');
                 select.innerHTML = '<option value="" disabled selected>Elegí un destino ...</option>';
