@@ -487,6 +487,15 @@
             return Array.from(claves);
         }
 
+        function provinciaPerteneceAPais(feature, nombrePais, idPais) {
+            if (!feature || !feature.properties) return false;
+            const admin = normalizarTextoMapa(feature.properties.admin);
+            const geonunit = normalizarTextoMapa(feature.properties.geonunit);
+            const sovA3 = (feature.properties.sov_a3 || "").toUpperCase();
+            const clavesPais = obtenerClavesPais(nombrePais, idPais);
+            return clavesPais.includes(admin) || clavesPais.includes(geonunit) || (idPais && sovA3 === idPais);
+        }
+
         function abrirPantallaPais(idPais, nombrePais, geoData) {
             const width = 800;
             const height = 450;
@@ -505,14 +514,10 @@
             );
 
             d3.json("mapas/estados_provincias.geojson").then(function(data) {
-                const clavesPais = obtenerClavesPais(nombrePais, idPais);
                 const provincias = data.features.filter(p => {
                     const geometria = p.geometry && (p.geometry.type === "Polygon" || p.geometry.type === "MultiPolygon");
                     if (!geometria) return false;
-                    const admin = normalizarTextoMapa(p.properties.admin);
-                    const geonunit = normalizarTextoMapa(p.properties.geonunit);
-                    const sovA3 = (p.properties.sov_a3 || "").toUpperCase();
-                    return clavesPais.includes(admin) || clavesPais.includes(geonunit) || (idPais && sovA3 === idPais);
+                    return provinciaPerteneceAPais(p, nombrePais, idPais);
                 });
 
                 if (provincias.length === 0) {
@@ -820,7 +825,7 @@
             selectCiudad.innerHTML = '<option value="" disabled selected>Buscando Ciudades...</option>';
 
             d3.json("mapas/estados_provincias.geojson").then(function(data) {
-                const ciudades = data.features.filter(p => p.properties.admin === nombrePais);
+                const ciudades = data.features.filter(p => provinciaPerteneceAPais(p, nombrePais, idPais));
                 selectCiudad.innerHTML = '<option value="" disabled selected>¿Ciudad?</option>';
                 
                 ciudades.sort((a,b) => (a.properties.name || "").localeCompare(b.properties.name || "")).forEach(prov => {
@@ -927,7 +932,7 @@
             
             // Cargamos las provincias bien calientes desde nuestro archivo JSON
             d3.json("mapas/estados_provincias.geojson").then(function(data){
-                const provincias = data.features.filter(p => p.properties.admin === pais.nombre);
+                const provincias = data.features.filter(p => provinciaPerteneceAPais(p, pais.nombre, idPais));
                 const select = document.getElementById('select-nueva-ciudad');
                 select.innerHTML = '<option value="" disabled selected>Elegí un destino ...</option>';
                 
