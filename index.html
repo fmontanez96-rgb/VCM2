@@ -539,16 +539,31 @@
             );
             const codigoRegion = (propiedades.postal || propiedades.iso_3166_2 || "").toUpperCase();
 
+            const coincidePatron = (patrones = [], codigos = []) => {
+                const coincideNombre = patrones.some(p => nombreRegion.includes(p));
+                const coincideCodigo = codigos.some(c => codigoRegion === c || codigoRegion.endsWith(`-${c}`));
+                return coincideNombre || coincideCodigo;
+            };
+
             if (idPais === "USA") {
-                return nombreRegion.includes("alaska") || codigoRegion === "AK" || codigoRegion.endsWith("-AK");
+                return coincidePatron(
+                    ["alaska", "hawaii", "aleut"],
+                    ["AK", "HI"]
+                );
             }
 
             if (idPais === "FRA") {
-                return nombreRegion.includes("french guiana") || nombreRegion.includes("guyane") || codigoRegion === "GF" || codigoRegion.endsWith("-GF");
+                return coincidePatron(
+                    ["french guiana", "guyane", "guadeloupe", "martinique", "reunion", "mayotte", "saint pierre", "new caledonia", "polynesia"],
+                    ["GF", "GP", "MQ", "RE", "YT", "PM", "NC", "PF", "BL", "MF", "WF", "TF"]
+                );
             }
 
             if (idPais === "RUS") {
-                return nombreRegion.includes("chukchi") || nombreRegion.includes("chukot") || codigoRegion === "CHU" || codigoRegion.endsWith("-CHU");
+                return coincidePatron(
+                    ["chukchi", "chukot", "kamchatka", "sakhalin", "kuril", "nenets"],
+                    ["CHU", "KAM", "SAK", "NEN"]
+                );
             }
 
             return false;
