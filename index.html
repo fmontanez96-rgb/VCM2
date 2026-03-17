@@ -518,6 +518,16 @@
             return Array.from(claves);
         }
 
+        function obtenerIdProvincia(feature) {
+            if (!feature) return "";
+            const properties = feature.properties || {};
+            return (feature.id || properties.iso_3166_2 || properties.name || properties.name_en || "").toString();
+        }
+
+        function obtenerIdPathProvincia(idProvincia) {
+            return `prov-${normalizarTextoMapa(idProvincia || "provincia").replace(/\s+/g, '-')}`;
+        }
+
         function provinciaPerteneceAPais(feature, nombrePais, idPais, geoData = null) {
             if (!feature || !feature.properties) return false;
 
@@ -593,10 +603,10 @@
                     .enter()
                     .append("path")
                     .attr("class", "provincia")
-                    .attr("id", d => `prov-${normalizarTextoMapa(d.id || d.properties.iso_3166_2 || d.properties.name || d.properties.name_en || "provincia").replace(/\s+/g, '-')}`)
+                    .attr("id", d => obtenerIdPathProvincia(obtenerIdProvincia(d)))
                     .attr("d", path)
                     .style("fill", function(d) {
-                        const provId = (d.id || d.properties.iso_3166_2 || d.properties.name || d.properties.name_en || "").toString();
+                        const provId = obtenerIdProvincia(d);
                         if (provinciasVisitadas[idPais] && provinciasVisitadas[idPais][provId]) return "#FF0000";
                         if (destinosSonados[idPais] && destinosSonados[idPais].provincias && destinosSonados[idPais].provincias[provId]) return "#FFB300";
                         return "#FFFFFF";
@@ -624,8 +634,8 @@
                         event.stopPropagation();
 
                         const nombreProvincia = d.properties.name || d.properties.name_en || "Provincia";
-                        const idProvincia = (d.id || d.properties.iso_3166_2 || d.properties.name || Math.random().toString(36).substring(7)).toString();
-                        const idPathProvincia = `prov-${normalizarTextoMapa(idProvincia).replace(/\s+/g, '-')}`;
+                        const idProvincia = obtenerIdProvincia(d);
+                        const idPathProvincia = obtenerIdPathProvincia(idProvincia);
                         const [x, y] = d3.pointer(event, container.node());
                         const menu = d3.select("#menu-contextual");
                         const esVisitada = provinciasVisitadas[idPais] && provinciasVisitadas[idPais][idProvincia];
@@ -994,7 +1004,7 @@
                 
                 provincias.sort((a,b) => (a.properties.name || "").localeCompare(b.properties.name || "")).forEach(prov => {
                     const nombre = prov.properties.name || prov.properties.name_en || "Provincia";
-                    const idProv = prov.id || (prov.properties.iso_3166_2 || prov.properties.name || prov.properties.name_en).replace(/\s+/g,'_');
+                    const idProv = obtenerIdProvincia(prov);
                     
                     // Solo te muestro las que todavía no me hiciste conocer...
                     if (!provinciasVisitadas[idPais] || !provinciasVisitadas[idPais][idProv]) {
@@ -1025,6 +1035,13 @@
                 
                 if (idProvinciaGenerado) {
                     if (!provinciasVisitadas[idPais]) provinciasVisitadas[idPais] = {};
+                    const idPathProvincia = obtenerIdPathProvincia(idProvinciaGenerado);
+                    provinciasVisitadas[idPais][idProvinciaGenerado] = {
+                        nombre,
+                        albumes: [],
+                        historias: [],
+                        musica: null
+                    };
                     
                     // Marcamos el país como visitado automáticamente
                     if (!paisesVisitados[idPais]) {
@@ -1039,7 +1056,7 @@
                     // Pintamos en rojo tanto el país como la ciudad en el mapa
                     d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
                     try {
-                        d3.select(`#${CSS.escape(idProvinciaGenerado)}`).classed('visitada', true);
+                        d3.select(`#${CSS.escape(idPathProvincia)}`).classed('visitada', true).style("fill", "#FF0000");
                     } catch(e) { console.log("No se pudo pintar la ciudad aún"); }
                     
                     modal.remove(); 
@@ -1060,7 +1077,7 @@
                     
                     // Intentamos pintar la provincia si tenemos el mapita detallado abierto en el fondo
                     try {
-                        d3.select(`#${CSS.escape(idProvinciaGenerado)}`).classed('visitada', true);
+                        d3.select(`#${CSS.escape(idPathProvincia)}`).classed('visitada', true).style("fill", "#FF0000");
                     } catch(e) {}
                     
                     modal.remove(); 
