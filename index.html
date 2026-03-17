@@ -518,13 +518,32 @@
             return Array.from(claves);
         }
 
-        function provinciaPerteneceAPais(feature, nombrePais, idPais) {
+        function provinciaPerteneceAPais(feature, nombrePais, idPais, geoData = null) {
             if (!feature || !feature.properties) return false;
+
+            if (geoData && feature.geometry) {
+                try {
+                    const centroide = d3.geoCentroid(feature);
+                    if (Array.isArray(centroide) && centroide.length === 2 && d3.geoContains(geoData, centroide)) {
+                        return true;
+                    }
+                } catch (e) {
+                    // Si falla el cálculo espacial, usamos el plan B por nombres/códigos.
+                }
+            }
+
             const admin = normalizarTextoMapa(feature.properties.admin);
             const geonunit = normalizarTextoMapa(feature.properties.geonunit);
-            const sovA3 = (feature.properties.sov_a3 || "").toUpperCase();
+            const codigosFeature = [
+                feature.properties.sov_a3,
+                feature.properties.adm0_a3,
+                feature.properties.iso_a3,
+                feature.properties.gu_a3,
+                feature.properties.brk_a3
+            ].map(v => (v || "").toUpperCase()).filter(Boolean);
+
             const clavesPais = obtenerClavesPais(nombrePais, idPais);
-            return clavesPais.includes(admin) || clavesPais.includes(geonunit) || (idPais && sovA3 === idPais);
+            return clavesPais.includes(admin) || clavesPais.includes(geonunit) || (idPais && codigosFeature.includes(idPais));
         }
 
         function abrirPantallaPais(idPais, nombrePais, geoData) {
@@ -548,7 +567,7 @@
                 const provincias = data.features.filter(p => {
                     const geometria = p.geometry && (p.geometry.type === "Polygon" || p.geometry.type === "MultiPolygon");
                     if (!geometria) return false;
-                    return provinciaPerteneceAPais(p, nombrePais, idPais);
+                    return provinciaPerteneceAPais(p, nombrePais, idPais, geoData);
                 });
 
                 if (provincias.length === 0) {
