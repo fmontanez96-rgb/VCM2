@@ -916,45 +916,6 @@
             document.getElementById('selector-nuevo-recuerdo').style.display = 'block';
         };
 
-        window.cargarCiudadesAventura = function() {
-            const selectPais = document.getElementById('select-pais-nuevo');
-            const selectCiudad = document.getElementById('select-ciudad-aventura');
-            if (!selectPais || !selectCiudad) return;
-
-            const idPais = selectPais.value;
-            if (!idPais) {
-                selectCiudad.innerHTML = '<option value="" disabled selected>Elige una ciudad...</option>';
-                return;
-            }
-
-            const nombrePais = selectPais.options[selectPais.selectedIndex]?.text || "";
-            selectCiudad.innerHTML = '<option value="" disabled selected>Cargando ciudades...</option>';
-
-            d3.json(ESTADOS_PROVINCIAS_URL).then(function(data) {
-                const ciudades = data.features
-                    .filter(p => provinciaPerteneceAPais(p, nombrePais, idPais))
-                    .map(p => p.properties.name || p.properties.name_en || "")
-                    .filter(Boolean)
-                    .sort((a, b) => a.localeCompare(b));
-
-                const ciudadesUnicas = [...new Set(ciudades)];
-                if (ciudadesUnicas.length === 0) {
-                    selectCiudad.innerHTML = '<option value="" disabled selected>No encontramos ciudades</option>';
-                    return;
-                }
-
-                selectCiudad.innerHTML = '<option value="" disabled selected>Elige una ciudad...</option>';
-                ciudadesUnicas.forEach(ciudad => {
-                    const opt = document.createElement('option');
-                    opt.value = ciudad;
-                    opt.textContent = ciudad;
-                    selectCiudad.appendChild(opt);
-                });
-            }).catch(function() {
-                selectCiudad.innerHTML = '<option value="" disabled selected>No se pudieron cargar ciudades</option>';
-            });
-        };
-
         window.cargarCiudadesRecuerdo = function() {
             const selectPais = document.getElementById('select-pais-recuerdo');
             const idPais = selectPais.value;
@@ -1416,7 +1377,7 @@
             }
         };
         
-       function renderizarPantallaSonadosLegacy() {
+       function renderizarPantallaSonados() {
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
 
@@ -1659,7 +1620,9 @@
             selectCiudad.innerHTML = '<option value="" disabled selected>Cargando ciudades...</option>';
 
             d3.json(ESTADOS_PROVINCIAS_URL).then(data => {
-
+                const geoDataPais = d3.select(`.pais[id="${idPaisEscala}"]`).datum();
+                const ciudades = data.features
+                    .filter(f => provinciaPerteneceAPais(f, nombrePais, idPaisEscala, geoDataPais))
                     .map(f => f.properties.name || f.properties.name_en || "")
                     .filter(Boolean)
                     .sort((a, b) => a.localeCompare(b));
