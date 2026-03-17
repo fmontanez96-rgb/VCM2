@@ -529,8 +529,34 @@
             return `prov-${normalizarTextoMapa(idProvincia || "provincia").replace(/\s+/g, '-')}`;
         }
 
+
+        function esRegionRemotaAExcluir(feature, idPais) {
+            if (!feature || !feature.properties || !idPais) return false;
+
+            const propiedades = feature.properties;
+            const nombreRegion = normalizarTextoMapa(
+                propiedades.name || propiedades.name_en || propiedades.woe_name || propiedades.name_alt || ""
+            );
+            const codigoRegion = (propiedades.postal || propiedades.iso_3166_2 || "").toUpperCase();
+
+            if (idPais === "USA") {
+                return nombreRegion.includes("alaska") || codigoRegion === "AK" || codigoRegion.endsWith("-AK");
+            }
+
+            if (idPais === "FRA") {
+                return nombreRegion.includes("french guiana") || nombreRegion.includes("guyane") || codigoRegion === "GF" || codigoRegion.endsWith("-GF");
+            }
+
+            if (idPais === "RUS") {
+                return nombreRegion.includes("chukchi") || nombreRegion.includes("chukot") || codigoRegion === "CHU" || codigoRegion.endsWith("-CHU");
+            }
+
+            return false;
+        }
+
         function provinciaPerteneceAPais(feature, nombrePais, idPais, geoData = null) {
             if (!feature || !feature.properties) return false;
+            if (esRegionRemotaAExcluir(feature, idPais)) return false;
 
             if (geoData && feature.geometry) {
                 try {
