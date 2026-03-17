@@ -453,7 +453,7 @@
                             // Planear aventura se queda fijo
                             d3.select("#opc-planear").on("click", function() {
                                 if (!esSonado) {
-                                    destinosSonados[idPais] = { nombre: nombrePais, itinerario: [] };
+                                    destinosSonados[idPais] = { nombre: nombrePais, destinoFinal: nombrePais, escalas: [], escalasCiudades: [], itinerario: [] };
                                     elementoPais.classed("sonado", true);
                                 }
                                 menu.classed("menu-visible", false).classed("menu-oculto", true);
@@ -728,7 +728,7 @@
                         });
 
                         d3.select("#opc-prov-planear").on("click", function() {
-                            if (!destinosSonados[idPais]) destinosSonados[idPais] = { nombre: nombrePais, itinerario: [] };
+                            if (!destinosSonados[idPais]) destinosSonados[idPais] = { nombre: nombrePais, destinoFinal: nombrePais, escalas: [], escalasCiudades: [], itinerario: [] };
                             menu.classed("menu-visible", false).classed("menu-oculto", true);
                             irAPantalla('vista-por-vivir');
                             setTimeout(() => abrirPlanificador(idPais), 50);
@@ -817,7 +817,7 @@
                 idsPaises.forEach(id => {
                     const pais = destinosSonados[id];
                     const numItems = pais.itinerario.length;
-                    const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+                    const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
                     listaHTML.innerHTML += `
                         <div class="tarjeta-pais">
                             <div class="info-pais">
@@ -914,6 +914,45 @@
 
         window.mostrarSelectorNuevoRecuerdo = function() {
             document.getElementById('selector-nuevo-recuerdo').style.display = 'block';
+        };
+
+        window.cargarCiudadesAventura = function() {
+            const selectPais = document.getElementById('select-pais-nuevo');
+            const selectCiudad = document.getElementById('select-ciudad-aventura');
+            if (!selectPais || !selectCiudad) return;
+
+            const idPais = selectPais.value;
+            if (!idPais) {
+                selectCiudad.innerHTML = '<option value="" disabled selected>Elige una ciudad...</option>';
+                return;
+            }
+
+            const nombrePais = selectPais.options[selectPais.selectedIndex]?.text || "";
+            selectCiudad.innerHTML = '<option value="" disabled selected>Cargando ciudades...</option>';
+
+            d3.json(ESTADOS_PROVINCIAS_URL).then(function(data) {
+                const ciudades = data.features
+                    .filter(p => provinciaPerteneceAPais(p, nombrePais, idPais))
+                    .map(p => p.properties.name || p.properties.name_en || "")
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b));
+
+                const ciudadesUnicas = [...new Set(ciudades)];
+                if (ciudadesUnicas.length === 0) {
+                    selectCiudad.innerHTML = '<option value="" disabled selected>No encontramos ciudades</option>';
+                    return;
+                }
+
+                selectCiudad.innerHTML = '<option value="" disabled selected>Elige una ciudad...</option>';
+                ciudadesUnicas.forEach(ciudad => {
+                    const opt = document.createElement('option');
+                    opt.value = ciudad;
+                    opt.textContent = ciudad;
+                    selectCiudad.appendChild(opt);
+                });
+            }).catch(function() {
+                selectCiudad.innerHTML = '<option value="" disabled selected>No se pudieron cargar ciudades</option>';
+            });
         };
 
         window.cargarCiudadesRecuerdo = function() {
@@ -1377,7 +1416,7 @@
             }
         };
         
-       function renderizarPantallaSonados() {
+       function renderizarPantallaSonadosLegacy() {
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
 
@@ -1515,8 +1554,10 @@
 
         window.confirmarNuevoDestino = function() {
             const select = document.getElementById('select-pais-nuevo');
+            const selectCiudad = document.getElementById('select-ciudad-aventura');
             const id = select.value;
             const nombre = select.options[select.selectedIndex].text;
+            const ciudadSeleccionada = selectCiudad ? (selectCiudad.value || '') : '';
 
             if (!id || id === "") return;
 
@@ -1527,12 +1568,19 @@
                 destinosSonados[id] = {
                     nombre: nombre,
                     destinoFinal: nombre,
+                    ciudadDestinoFinal: ciudadSeleccionada ? ciudadSeleccionada.toUpperCase() : '',
                     escalas: [],
+                    escalasCiudades: ciudadSeleccionada ? [ciudadSeleccionada.toUpperCase()] : [],
                     itinerario: []
                 };
                 
                 // Pintar el mapa
                 d3.select(`.pais[id="${id}"]`).classed('sonado', true);
+            } else if (ciudadSeleccionada) {
+                const ciudadNormalizada = ciudadSeleccionada.toUpperCase();
+                destinosSonados[id].ciudadDestinoFinal = ciudadNormalizada;
+                if (!destinosSonados[id].escalasCiudades) destinosSonados[id].escalasCiudades = [];
+                if (!destinosSonados[id].escalasCiudades.includes(ciudadNormalizada)) destinosSonados[id].escalasCiudades.push(ciudadNormalizada);
             }
 
             abrirPlanificador(id);
@@ -1542,11 +1590,12 @@
             const pais = destinosSonados[idPais];
             const scrollArea = document.getElementById('scroll-sonados');
             
-            const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+            const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
 
             let nombreVisual = `<span style="color: #FF4081;">${nombrePrincipal}</span>`;
-            if (pais.escalas && pais.escalas.length > 0) {
-                nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${pais.escalas.join(' - ').toUpperCase()})</span>`;
+            const listaEscalas = pais.escalasCiudades && pais.escalasCiudades.length > 0 ? pais.escalasCiudades : (pais.escalas || []);
+            if (listaEscalas.length > 0) {
+                nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${listaEscalas.join(', ').toUpperCase()})</span>`;
             }
 
             scrollArea.innerHTML = `
@@ -1585,6 +1634,55 @@
         window.manual_Aventura = (btn) => mostrarFormularioItinerario('aventura', btn);
         window.manual_Restaurante = (btn) => mostrarFormularioItinerario('restaurante', btn);
 
+        function obtenerNombreCabeceraDestino(pais) {
+            const nombrePais = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+            const nombreCiudad = (pais.ciudadDestinoFinal || "").toUpperCase();
+            return nombreCiudad ? `${nombrePais}, ${nombreCiudad}` : nombrePais;
+        }
+
+        window.cargarCiudadesEscalaViaje = function() {
+            const selectPais = document.getElementById('input-viaje-destino');
+            const contenedorCiudad = document.getElementById('campo-viaje-ciudad');
+            const selectCiudad = document.getElementById('input-viaje-ciudad');
+
+            if (!selectPais || !contenedorCiudad || !selectCiudad) return;
+
+            const idPaisEscala = selectPais.value;
+            if (!idPaisEscala) {
+                contenedorCiudad.style.display = 'none';
+                selectCiudad.innerHTML = '<option value="" disabled selected>Selecciona una ciudad...</option>';
+                return;
+            }
+
+            const nombrePais = selectPais.options[selectPais.selectedIndex]?.text || "";
+            contenedorCiudad.style.display = 'block';
+            selectCiudad.innerHTML = '<option value="" disabled selected>Cargando ciudades...</option>';
+
+            d3.json(ESTADOS_PROVINCIAS_URL).then(data => {
+                const ciudades = data.features
+                    .filter(f => provinciaPerteneceAPais(f, nombrePais, idPaisEscala))
+                    .map(f => f.properties.name || f.properties.name_en || "")
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b));
+
+                const unicas = [...new Set(ciudades)];
+                if (unicas.length === 0) {
+                    selectCiudad.innerHTML = '<option value="" disabled selected>No encontramos ciudades para este país</option>';
+                    return;
+                }
+
+                selectCiudad.innerHTML = '<option value="" disabled selected>Selecciona una ciudad...</option>';
+                unicas.forEach(ciudad => {
+                    const opt = document.createElement('option');
+                    opt.value = ciudad;
+                    opt.textContent = ciudad;
+                    selectCiudad.appendChild(opt);
+                });
+            }).catch(() => {
+                selectCiudad.innerHTML = '<option value="" disabled selected>No se pudieron cargar ciudades</option>';
+            });
+        };
+
         window.borrarItinerarioCompleto = function(idPais) {
             const btn = document.getElementById('btn-borrar-iti');
             if (btn.dataset.confirm === 'true') {
@@ -1619,9 +1717,9 @@
             if (tipo === 'viaje') {
                 const paisesMapa = d3.selectAll('.pais').data();
                 const paisesSelect = paisesMapa
-                    .map(d => d.properties.name)
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(name => `<option value="${name}">${name}</option>`)
+                    .map(d => ({ id: d.id, nombre: d.properties.name }))
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                    .map(p => `<option value="${p.id}">${p.nombre}</option>` )
                     .join('');
 
                 formHTML += `
@@ -1629,7 +1727,10 @@
                         <select id="input-viaje-medio"><option value="Micro">🚌 Micro / Autobús</option><option value="Auto">🚗 Auto / Alquiler</option><option value="Avión">✈️ Avión</option><option value="Tren">🚂 Tren</option></select>
                     </div>
                     <div class="campo-form"><label>País de Escala</label>
-                        <select id="input-viaje-destino"><option value="" disabled selected>Selecciona un país...</option>${paisesSelect}</select>
+                        <select id="input-viaje-destino" onchange="cargarCiudadesEscalaViaje()"><option value="" disabled selected>Selecciona un país...</option>${paisesSelect}</select>
+                    </div>
+                    <div class="campo-form" id="campo-viaje-ciudad" style="display:none;"><label>Ciudad de Escala</label>
+                        <select id="input-viaje-ciudad"><option value="" disabled selected>Selecciona una ciudad...</option></select>
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <div class="campo-form" style="flex: 1;"><label>Horas</label><input type="number" id="input-viaje-horas" placeholder="0"></div>
@@ -1674,17 +1775,29 @@
             const dataPais = destinosSonados[idPais];
             if (!dataPais.destinoFinal) dataPais.destinoFinal = dataPais.nombre;
             if (!dataPais.escalas) dataPais.escalas = [];
+            if (!dataPais.escalasCiudades) dataPais.escalasCiudades = [];
 
             if (tipo === 'viaje') {
                 nuevoItem.medio = document.getElementById('input-viaje-medio').value;
-                const escalaValor = document.getElementById('input-viaje-destino').value;
-                nuevoItem.destino = escalaValor;
+                const selectPaisEscala = document.getElementById('input-viaje-destino');
+                const escalaId = selectPaisEscala.value;
+                const escalaNombre = selectPaisEscala.options[selectPaisEscala.selectedIndex]?.text || '';
+                const selectCiudadEscala = document.getElementById('input-viaje-ciudad');
+                const ciudadEscala = selectCiudadEscala ? (selectCiudadEscala.value || '') : '';
+                nuevoItem.destino = escalaNombre;
+                nuevoItem.destinoId = escalaId;
+                nuevoItem.ciudad = ciudadEscala;
                 nuevoItem.horas = document.getElementById('input-viaje-horas').value || '0';
                 nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
                 nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
-                const escN = escalaValor ? escalaValor.toUpperCase() : "";
+                const escN = escalaNombre ? escalaNombre.toUpperCase() : "";
                 if (escN && escN !== dataPais.destinoFinal.toUpperCase() && !dataPais.escalas.includes(escN)) {
                     dataPais.escalas.push(escN);
+                }
+                if (ciudadEscala) {
+                    const ciudadNormalizada = ciudadEscala.toUpperCase();
+                    if (!dataPais.escalasCiudades.includes(ciudadNormalizada)) dataPais.escalasCiudades.push(ciudadNormalizada);
+                    dataPais.ciudadDestinoFinal = ciudadNormalizada;
                 }
             } else if (tipo === 'hospedaje') {
                 nuevoItem.hotel = document.getElementById('input-hospedaje-nombre').value || 'Alojamiento';
@@ -1722,7 +1835,7 @@
             }
             items.forEach(item => {
                 let icono = 'circle'; let titulo = ''; let detalles = '';
-                if (item.tipo === 'viaje') { icono = 'bus'; titulo = `Viaje en ${item.medio}`; detalles = `Escala: ${item.destino}<br>Costo: $${item.costo}`; }
+                if (item.tipo === 'viaje') { icono = 'bus'; titulo = `Viaje en ${item.medio}`; detalles = `Escala: ${item.destino}${item.ciudad ? `, ${item.ciudad}` : ''}<br>Costo: $${item.costo}`; }
                 else if (item.tipo === 'hospedaje') { icono = 'hotel'; titulo = item.hotel; detalles = `${item.noches} noches - Total: $${item.costo}`; }
                 else if (item.tipo === 'aventura') { icono = 'mountain'; titulo = item.lugar; detalles = `Día: ${item.dia} ($${item.costo})<br>${item.llegada || ''} - ${item.partida || ''}`; }
                 else if (item.tipo === 'restaurante') { icono = 'utensils'; titulo = item.plato; detalles = `Gasto: $${item.precio}`; }
