@@ -1659,8 +1659,7 @@
             selectCiudad.innerHTML = '<option value="" disabled selected>Cargando ciudades...</option>';
 
             d3.json(ESTADOS_PROVINCIAS_URL).then(data => {
-                const ciudades = data.features
-                    .filter(f => provinciaPerteneceAPais(f, nombrePais, idPaisEscala))
+
                     .map(f => f.properties.name || f.properties.name_en || "")
                     .filter(Boolean)
                     .sort((a, b) => a.localeCompare(b));
