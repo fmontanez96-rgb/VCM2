@@ -1683,6 +1683,38 @@
             return construirEscalaNormalizada(escala).resumen;
         }
 
+        function obtenerResumenEscalasAgrupado(destino) {
+            const dataDestino = asegurarEstructuraDestinoSonado(destino);
+            if (!dataDestino || !Array.isArray(dataDestino.escalasDetalle)) return [];
+
+            const escalasAgrupadas = new Map();
+
+            dataDestino.escalasDetalle.forEach(escala => {
+                const escalaNormalizada = construirEscalaNormalizada(escala);
+                if (!escalaNormalizada.pais) return;
+
+                const clavePais = escalaNormalizada.paisId || escalaNormalizada.pais;
+                if (!escalasAgrupadas.has(clavePais)) {
+                    escalasAgrupadas.set(clavePais, {
+                        pais: escalaNormalizada.pais,
+                        ciudades: new Set()
+                    });
+                }
+
+                if (escalaNormalizada.ciudad) {
+                    escalasAgrupadas.get(clavePais).ciudades.add(escalaNormalizada.ciudad);
+                }
+            });
+
+            return Array.from(escalasAgrupadas.values()).map(({ pais, ciudades }) => {
+                if (ciudades.size === 1) {
+                    return Array.from(ciudades)[0];
+                }
+
+                return pais;
+            });
+        }
+
         function asegurarEstructuraDestinoSonado(dataPais, idPais = '') {
             if (!dataPais) return null;
 
@@ -1734,24 +1766,7 @@
             if (!destino) return '';
 
             const baseTitulo = obtenerNombreCabeceraDestino(destino);
-            const escalasVisibles = [];
-            const escalasYaIncluidas = new Set();
-
-            (destino.escalasDetalle || []).forEach(escala => {
-                if (!escala) return;
-
-                const ciudadEscala = (escala.ciudad || '').toUpperCase().trim();
-                const paisEscala = (escala.pais || escala.destino || '').toUpperCase().trim();
-                const textoEscala = ciudadEscala || paisEscala;
-                if (!textoEscala) return;
-
-                const claveVisible = textoEscala.normalize('NFD').replace(/[̀-ͯ]/g, '');
-                if (escalasYaIncluidas.has(claveVisible)) return;
-
-                escalasYaIncluidas.add(claveVisible);
-                escalasVisibles.push(textoEscala);
-            });
-
+            const escalasVisibles = obtenerResumenEscalasAgrupado(destino);
             return escalasVisibles.length > 0 ? `${baseTitulo} (${escalasVisibles.join(', ')})` : baseTitulo;
         }
 
