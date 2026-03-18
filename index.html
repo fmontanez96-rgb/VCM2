@@ -261,7 +261,13 @@
     </div>
 
     <script>
-        lucide.createIcons();
+        function renderizarIconos() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        renderizarIconos();
 
         // BASES DE DATOS EN MEMORIA
         let paisesVisitados = {};
@@ -305,6 +311,15 @@
         };
 
         function cargarMapa() {
+            if (!window.d3) {
+                console.error('D3 no está disponible. No se pudo inicializar el mapa.');
+                const container = document.getElementById('world-map');
+                if (container) {
+                    container.innerHTML = '<div id="mapa-error-banner">No se pudo inicializar el mapa porque D3 no está disponible.</div>';
+                }
+                return;
+            }
+
             const width = 800;
             const height = 450;
             const container = d3.select("#world-map");
@@ -411,7 +426,7 @@
                             </ul>
                         `);
 
-                        lucide.createIcons();
+                        renderizarIconos();
                         menu.classed("menu-oculto", false).classed("menu-visible", true);
 
                         const menuWidth = menu.node().offsetWidth;
@@ -698,7 +713,7 @@
                             </ul>
                         `);
 
-                        lucide.createIcons();
+                        renderizarIconos();
                         menu.classed("menu-oculto", false)
                             .classed("menu-visible", true)
                             .style("left", x + "px")
@@ -760,6 +775,7 @@
         function renderizarPantallaSonados() {
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
+            const idPendiente = opciones.abrirPlanificadorId || aperturaPlanificadorPendiente;
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
@@ -908,7 +924,7 @@
                 });
                 scrollArea.appendChild(listaHTML);
             }
-            lucide.createIcons();
+            renderizarIconos();
         }
 
         window.mostrarSelectorNuevoRecuerdo = function() {
@@ -1048,7 +1064,7 @@
                         `).join('')}
                     </div>
                 `;
-                lucide.createIcons();
+                renderizarIconos();
                 return;
             }
 
@@ -1248,7 +1264,7 @@
             `;
 
             actualizarVistaAlbumes(idPais, idProvincia);
-            lucide.createIcons();
+            renderizarIconos();
         };
 
         window.extraerIDYoutube = function(url) {
@@ -1338,7 +1354,7 @@
                     });
                 }
             }
-            lucide.createIcons();
+            renderizarIconos();
         };
 
         window.agregarHistoria = function(idPais, idProvincia = null) {
@@ -1543,7 +1559,7 @@
             </div>
         </div>
     `;
-    lucide.createIcons();
+    renderizarIconos();
 };
 
         window.mostrarSelectorNuevoDestino = function() {
@@ -1696,14 +1712,14 @@
                 btn.innerHTML = '<i data-lucide="alert-triangle"></i> ¿Seguro?';
                 btn.style.background = '#F44336';
                 btn.style.color = 'white';
-                lucide.createIcons();
+                renderizarIconos();
                 setTimeout(() => {
                     if(document.getElementById('btn-borrar-iti')) {
                         btn.dataset.confirm = 'false';
                         btn.innerHTML = '<i data-lucide="trash-2"></i> Borrar Todo';
                         btn.style.background = '#FFEBEE';
                         btn.style.color = '#F44336';
-                        lucide.createIcons();
+                        renderizarIconos();
                     }
                 }, 3000);
             }
@@ -1788,7 +1804,9 @@
                 const ciudadEscala = selectCiudadEscala ? (selectCiudadEscala.value || '') : '';
                 nuevoItem.destino = escalaNombre;
                 nuevoItem.destinoId = escalaId;
+                nuevoItem.destinoLabel = escalaNombre;
                 nuevoItem.ciudad = ciudadEscala;
+                nuevoItem.ciudadLabel = ciudadEscala;
                 nuevoItem.horas = document.getElementById('input-viaje-horas').value || '0';
                 nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
                 nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
@@ -1848,7 +1866,7 @@
                         <div class="item-detalles">${detalles}</div>
                     </div>`;
             });
-            lucide.createIcons();
+            renderizarIconos();
         };
         document.addEventListener("DOMContentLoaded", cargarMapa);
     </script>
