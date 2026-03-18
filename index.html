@@ -820,6 +820,7 @@
         function renderizarPantallaSonados(opciones = {}) {
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
+            const idPendiente = opciones.abrirPlanificadorId || aperturaPlanificadorPendiente;
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
