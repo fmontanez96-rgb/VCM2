@@ -812,7 +812,9 @@
             scrollArea.appendChild(listaDestinos);
         }
 
-        function renderizarPantallaSonados() {
+        let aperturaPlanificadorPendiente = null;
+
+        function renderizarPantallaSonados(opciones = {}) {
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
 
@@ -871,6 +873,11 @@
             }
 
             lucide.createIcons();
+
+            if (idPendiente && destinosSonados[idPendiente] && document.getElementById('scroll-sonados')) {
+                aperturaPlanificadorPendiente = null;
+                setTimeout(() => abrirPlanificador(idPendiente), 80);
+            }
         }
 
         window.renderizarPantallaRecuerdos = function() {
@@ -1546,8 +1553,16 @@
         };
 
         window.abrirPlanificador = function(idPais) {
-            const pais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
+            if (!destinosSonados[idPais]) return;
+
             const scrollArea = document.getElementById('scroll-sonados');
+            if (!scrollArea) {
+                aperturaPlanificadorPendiente = idPais;
+                renderizarPantallaSonados({ abrirPlanificadorId: idPais });
+                return;
+            }
+
+            const pais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
             const tituloAventura = obtenerTituloAventuraCompleto(pais);
             const nombreVisual = `<span style="color: #FF4081;">${tituloAventura}</span>`;
 
