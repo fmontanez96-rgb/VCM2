@@ -1727,19 +1727,33 @@
             const escalasVisibles = [];
             const escalasYaIncluidas = new Set();
 
-            (destino.escalasDetalle || []).forEach(escala => {
+            (destino?.escalasDetalle || []).forEach(escala => {
                 if (!escala) return;
 
-                const ciudadEscala = (escala.ciudad || '').toUpperCase().trim();
-                const paisEscala = (escala.pais || escala.destino || '').toUpperCase().trim();
-                const textoEscala = ciudadEscala || paisEscala;
-                if (!textoEscala) return;
+                const nombrePais = (escala.pais || escala.destino || '').trim();
+                const paisId = (escala.paisId || '').trim();
+                const clavePais = obtenerClaveNormalizadaEscala(paisId || nombrePais);
+                if (!clavePais) return;
 
-                const claveVisible = textoEscala.normalize('NFD').replace(/[̀-ͯ]/g, '');
-                if (escalasYaIncluidas.has(claveVisible)) return;
+                const ciudad = (escala.ciudad || '').trim();
+                const claveCiudad = obtenerClaveNormalizadaEscala(ciudad);
+                let grupoPais = gruposPorPais.get(clavePais);
 
-                escalasYaIncluidas.add(claveVisible);
-                escalasVisibles.push(textoEscala);
+                if (!grupoPais) {
+                    grupoPais = {
+                        nombrePais,
+                        ciudades: [],
+                        ciudadesVistas: new Set()
+                    };
+                    gruposPorPais.set(clavePais, grupoPais);
+                } else if (!grupoPais.nombrePais && nombrePais) {
+                    grupoPais.nombrePais = nombrePais;
+                }
+
+                if (claveCiudad && !grupoPais.ciudadesVistas.has(claveCiudad)) {
+                    grupoPais.ciudadesVistas.add(claveCiudad);
+                    grupoPais.ciudades.push(ciudad);
+                }
             });
 
             return {
