@@ -812,9 +812,11 @@
             scrollArea.appendChild(listaDestinos);
         }
 
-        function renderizarPantallaSonados() {
+        let aperturaPlanificadorPendiente = null;
+
+        function renderizarPantallaSonados(opciones = {}) {
             const contenedor = document.getElementById('vista-por-vivir');
-            if (!contenedor) return;
+            const idsPaises = Object.keys(destinosSonados);
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
@@ -843,8 +845,39 @@
             `;
 
             poblarSelectorPaisNuevoDestinoSonado();
-            renderizarListaDestinosPorVivir();
+
+            const scrollArea = document.getElementById('scroll-sonados');
+
+            if (idsPaises.length === 0) {
+                scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="compass"></i><p>No tienes aventuras planeadas todavía.</p></div>`;
+            } else {
+                const listaHTML = document.createElement('div');
+                listaHTML.className = 'lista-paises';
+
+                idsPaises.forEach(id => {
+                    const pais = destinosSonados[id];
+                    const numItems = pais.itinerario.length;
+                    const tituloAventura = obtenerTituloAventuraCompleto(pais);
+
+                    listaHTML.innerHTML += `
+                        <div class="tarjeta-pais">
+                            <div class="info-pais">
+                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
+                                <div><h3 class="nombre-pais-lista">${tituloAventura}</h3><span class="zonas-badge">${numItems} pasos</span></div>
+                            </div>
+                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
+                        </div>`;
+                });
+
+                scrollArea.appendChild(listaHTML);
+            }
+
             lucide.createIcons();
+
+            if (idPendiente && destinosSonados[idPendiente] && document.getElementById('scroll-sonados')) {
+                aperturaPlanificadorPendiente = null;
+                setTimeout(() => abrirPlanificador(idPendiente), 80);
+            }
         }
 
         window.renderizarPantallaRecuerdos = function() {
@@ -1520,8 +1553,16 @@
         };
 
         window.abrirPlanificador = function(idPais) {
-            const pais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
+            if (!destinosSonados[idPais]) return;
+
             const scrollArea = document.getElementById('scroll-sonados');
+            if (!scrollArea) {
+                aperturaPlanificadorPendiente = idPais;
+                renderizarPantallaSonados({ abrirPlanificadorId: idPais });
+                return;
+            }
+
+            const pais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
             const tituloAventura = obtenerTituloAventuraCompleto(pais);
             const nombreVisual = `<span style="color: #FF4081;">${tituloAventura}</span>`;
 
