@@ -453,7 +453,7 @@
                             // Planear aventura se queda fijo
                             d3.select("#opc-planear").on("click", function() {
                                 if (!esSonado) {
-                                    destinosSonados[idPais] = { nombre: nombrePais, destinoFinal: nombrePais, escalas: [], escalasCiudades: [], itinerario: [] };
+                                    destinosSonados[idPais] = crearDestinoSonadoBase(nombrePais);
                                     elementoPais.classed("sonado", true);
                                 }
                                 menu.classed("menu-visible", false).classed("menu-oculto", true);
@@ -728,7 +728,7 @@
                         });
 
                         d3.select("#opc-prov-planear").on("click", function() {
-                            if (!destinosSonados[idPais]) destinosSonados[idPais] = { nombre: nombrePais, destinoFinal: nombrePais, escalas: [], escalasCiudades: [], itinerario: [] };
+                            if (!destinosSonados[idPais]) destinosSonados[idPais] = crearDestinoSonadoBase(nombrePais);
                             menu.classed("menu-visible", false).classed("menu-oculto", true);
                             irAPantalla('vista-por-vivir');
                             setTimeout(() => abrirPlanificador(idPais), 50);
@@ -1471,35 +1471,26 @@
             document.getElementById('selector-nuevo-destino').style.display = 'none';
 
             if (!destinosSonados[id]) {
-                destinosSonados[id] = {
-                    nombre: nombre,
-                    destinoFinal: nombre,
-                    ciudadDestinoFinal: ciudadSeleccionada ? ciudadSeleccionada.toUpperCase() : '',
-                    escalas: [],
-                    escalasCiudades: ciudadSeleccionada ? [ciudadSeleccionada.toUpperCase()] : [],
-                    itinerario: []
-                };
+                destinosSonados[id] = crearDestinoSonadoBase(nombre, ciudadSeleccionada);
                 
                 // Pintar el mapa
                 d3.select(`.pais[id="${id}"]`).classed('sonado', true);
             } else if (ciudadSeleccionada) {
-                const ciudadNormalizada = ciudadSeleccionada.toUpperCase();
-                destinosSonados[id].ciudadDestinoFinal = ciudadNormalizada;
-                if (!destinosSonados[id].escalasCiudades) destinosSonados[id].escalasCiudades = [];
-                if (!destinosSonados[id].escalasCiudades.includes(ciudadNormalizada)) destinosSonados[id].escalasCiudades.push(ciudadNormalizada);
+                const destino = asegurarEstructuraDestinoSonado(destinosSonados[id], id);
+                destino.ciudadDestinoFinal = ciudadSeleccionada.toUpperCase();
             }
 
             abrirPlanificador(id);
         };
 
         window.abrirPlanificador = function(idPais) {
-            const pais = destinosSonados[idPais];
+            const pais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
             const scrollArea = document.getElementById('scroll-sonados');
             
             const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
 
             let nombreVisual = `<span style="color: #FF4081;">${nombrePrincipal}</span>`;
-            const listaEscalas = pais.escalasCiudades && pais.escalasCiudades.length > 0 ? pais.escalasCiudades : (pais.escalas || []);
+            const listaEscalas = obtenerLabelsEscalas(pais);
             if (listaEscalas.length > 0) {
                 nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${listaEscalas.join(', ').toUpperCase()})</span>`;
             }
@@ -1540,7 +1531,89 @@
         window.manual_Aventura = (btn) => mostrarFormularioItinerario('aventura', btn);
         window.manual_Restaurante = (btn) => mostrarFormularioItinerario('restaurante', btn);
 
+        function crearDestinoSonadoBase(nombrePais, ciudadPrincipal = '') {
+            return {
+                nombre: nombrePais,
+                destinoFinal: nombrePais,
+                ciudadDestinoFinal: ciudadPrincipal ? ciudadPrincipal.toUpperCase() : '',
+                escalasDetalle: [],
+                itinerario: []
+            };
+        }
+
+        function construirLabelEscala(pais, ciudad = '') {
+            const paisNormalizado = (pais || '').toUpperCase();
+            const ciudadNormalizada = (ciudad || '').toUpperCase();
+            return ciudadNormalizada ? `${paisNormalizado}, ${ciudadNormalizada}` : paisNormalizado;
+        }
+
+        function asegurarEstructuraDestinoSonado(dataPais, idPais = '') {
+            if (!dataPais) return null;
+
+            if (!dataPais.destinoFinal) dataPais.destinoFinal = dataPais.nombre || '';
+            if (!Array.isArray(dataPais.itinerario)) dataPais.itinerario = [];
+            if (!Array.isArray(dataPais.escalasDetalle)) {
+                const escalasPaises = Array.isArray(dataPais.escalas) ? dataPais.escalas : [];
+                const escalasCiudades = Array.isArray(dataPais.escalasCiudades) ? dataPais.escalasCiudades : [];
+                const escalasDesdeItinerario = dataPais.itinerario
+                    .filter(item => item && item.tipo === 'viaje' && item.destino)
+                    .map(item => ({
+                        pais: item.destino,
+                        paisId: item.destinoId || '',
+                        ciudad: item.ciudad || '',
+                        label: construirLabelEscala(item.destino, item.ciudad || '')
+                    }));
+
+                const escalasLegacy = escalasPaises.map((paisEscala, index) => {
+                    const ciudadEscala = escalasCiudades.length === escalasPaises.length ? escalasCiudades[index] || '' : '';
+                    return {
+                        pais: paisEscala,
+                        paisId: '',
+                        ciudad: ciudadEscala,
+                        label: construirLabelEscala(paisEscala, ciudadEscala)
+                    };
+                });
+
+                dataPais.escalasDetalle = [...escalasDesdeItinerario, ...escalasLegacy];
+            }
+
+            const destinoPrincipal = (dataPais.destinoFinal || '').toUpperCase();
+            const ciudadPrincipal = (dataPais.ciudadDestinoFinal || '').toUpperCase();
+            dataPais.escalasDetalle = dataPais.escalasDetalle
+                .filter(Boolean)
+                .map(escala => {
+                    const paisEscala = (escala.pais || escala.destino || '').toUpperCase();
+                    const ciudadEscala = (escala.ciudad || '').toUpperCase();
+                    return {
+                        pais: paisEscala,
+                        paisId: escala.paisId || escala.destinoId || '',
+                        ciudad: ciudadEscala,
+                        label: escala.label || construirLabelEscala(paisEscala, ciudadEscala)
+                    };
+                })
+                .filter(escala => escala.pais && (
+                    escala.pais !== destinoPrincipal ||
+                    (escala.ciudad && ciudadPrincipal && escala.ciudad !== ciudadPrincipal)
+                ))
+                .filter((escala, index, escalas) =>
+                    escalas.findIndex(item => item.label === escala.label) === index
+                );
+
+            delete dataPais.escalas;
+            delete dataPais.escalasCiudades;
+
+            if (idPais) destinosSonados[idPais] = dataPais;
+            return dataPais;
+        }
+
+        function obtenerLabelsEscalas(dataPais) {
+            const destino = asegurarEstructuraDestinoSonado(dataPais);
+            if (!destino) return [];
+            return destino.escalasDetalle.map(escala => escala.label).filter(Boolean);
+        }
+
         function obtenerNombreCabeceraDestino(pais) {
+            asegurarEstructuraDestinoSonado(pais);
             const nombrePais = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
             const nombreCiudad = (pais.ciudadDestinoFinal || "").toUpperCase();
             return nombreCiudad ? `${nombrePais}, ${nombreCiudad}` : nombrePais;
@@ -1679,10 +1752,9 @@
 
         window.guardarItemItinerario = function(idPais, tipo) {
             let nuevoItem = { tipo: tipo, id: Date.now() };
-            const dataPais = destinosSonados[idPais];
+            const dataPais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
             if (!dataPais.destinoFinal) dataPais.destinoFinal = dataPais.nombre;
-            if (!dataPais.escalas) dataPais.escalas = [];
-            if (!dataPais.escalasCiudades) dataPais.escalasCiudades = [];
+            if (!Array.isArray(dataPais.escalasDetalle)) dataPais.escalasDetalle = [];
 
             if (tipo === 'viaje') {
                 nuevoItem.medio = document.getElementById('input-viaje-medio').value;
@@ -1697,14 +1769,32 @@
                 nuevoItem.horas = document.getElementById('input-viaje-horas').value || '0';
                 nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
                 nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
-                const escN = escalaNombre ? escalaNombre.toUpperCase() : "";
-                if (escN && escN !== dataPais.destinoFinal.toUpperCase() && !dataPais.escalas.includes(escN)) {
-                    dataPais.escalas.push(escN);
-                }
-                if (ciudadEscala) {
-                    const ciudadNormalizada = ciudadEscala.toUpperCase();
-                    if (!dataPais.escalasCiudades.includes(ciudadNormalizada)) dataPais.escalasCiudades.push(ciudadNormalizada);
-                    dataPais.ciudadDestinoFinal = ciudadNormalizada;
+
+                const paisEscalaNormalizado = escalaNombre ? escalaNombre.toUpperCase() : '';
+                const ciudadEscalaNormalizada = ciudadEscala ? ciudadEscala.toUpperCase() : '';
+                const destinoPrincipal = (dataPais.destinoFinal || '').toUpperCase();
+                const ciudadPrincipal = (dataPais.ciudadDestinoFinal || '').toUpperCase();
+                const esDestinoPrincipal = paisEscalaNormalizado === destinoPrincipal && (
+                    !ciudadEscalaNormalizada ||
+                    !ciudadPrincipal ||
+                    ciudadEscalaNormalizada === ciudadPrincipal
+                );
+
+                if (paisEscalaNormalizado && !esDestinoPrincipal) {
+                    const labelEscala = construirLabelEscala(escalaNombre, ciudadEscala);
+                    const yaExiste = dataPais.escalasDetalle.some(escala =>
+                        (escala.paisId && escalaId && escala.paisId === escalaId && (escala.ciudad || '').toUpperCase() === ciudadEscalaNormalizada) ||
+                        escala.label === labelEscala
+                    );
+
+                    if (!yaExiste) {
+                        dataPais.escalasDetalle.push({
+                            pais: paisEscalaNormalizado,
+                            paisId: escalaId,
+                            ciudad: ciudadEscalaNormalizada,
+                            label: labelEscala
+                        });
+                    }
                 }
             } else if (tipo === 'hospedaje') {
                 nuevoItem.hotel = document.getElementById('input-hospedaje-nombre').value || 'Alojamiento';
