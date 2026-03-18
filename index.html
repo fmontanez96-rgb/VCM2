@@ -776,9 +776,11 @@
                     <option value="" disabled selected>Elige un país...</option>
                 </select>
 
-                <select id="select-ciudad-aventura" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
-                    <option value="" disabled selected>Elige una ciudad...</option>
-                </select>
+                <div id="contenedor-ciudad-aventura" style="display:none;">
+                    <select id="select-ciudad-aventura" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
+                        <option value="" selected>Elegir ciudad (opcional)</option>
+                    </select>
+                </div>
                     <div style="display: flex; gap: 10px;">
                         <button onclick="confirmarNuevoDestino()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Crear Aventura</button>
                         <button onclick="document.getElementById('selector-nuevo-destino').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
@@ -1377,109 +1379,6 @@
             }
         };
         
-       function renderizarPantallaSonados() {
-            const contenedor = document.getElementById('vista-por-vivir');
-            const idsPaises = Object.keys(destinosSonados);
-
-            contenedor.innerHTML = `
-                <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2><i data-lucide="heart"></i> Destinos por Vivir</h2>
-                    <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoDestino()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);">
-                        <i data-lucide="plus-circle"></i> Nueva Aventura
-                    </button>
-                </div>
-                <div id="selector-nuevo-destino" style="display:none; background: #FFF8F1; margin: 15px; padding: 20px; border-radius: 15px; border: 2px dashed var(--primary); animation: fadeIn 0.3s ease;">
-                    <h3 style="margin-top:0; color: var(--primary);">¿A dónde quieres ir?</h3>
-                    <p style="font-size: 0.9rem; color: #607D8B;">Selecciona tu destino final para empezar a planear:</p>
-                    <select id="select-pais-nuevo" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
-                        <option value="" disabled selected>Cargando países...</option>
-                    </select>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="confirmarNuevoDestino()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Crear Aventura</button>
-                        <button onclick="document.getElementById('selector-nuevo-destino').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
-                    </div>
-                </div>
-                <div class="contenedor-scroll" id="scroll-sonados"></div>
-            `;
-
-            const scrollArea = document.getElementById('scroll-sonados');
-
-            // Cargar países dinámicamente desde los datos del mapa (D3)
-            setTimeout(() => {
-                const select = document.getElementById('select-pais-nuevo');
-                if (select) {
-                    const paisesMapa = d3.selectAll('.pais').data();
-                    
-                    if (paisesMapa && paisesMapa.length > 0) {
-                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
-                        const listaOrdenada = paisesMapa
-                            .map(d => ({ id: d.id, nombre: d.properties.name }))
-                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-                        listaOrdenada.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.nombre;
-                            select.appendChild(opt);
-                        });
-                    } else {
-                        select.innerHTML = '<option value="" disabled selected>Error cargando mapa...</option>';
-                    }
-                }
-            }, 100);
-
-            if (idsPaises.length === 0) {
-                scrollArea.innerHTML = `
-                    <div class="mensaje-vacio">
-                        <i data-lucide="compass"></i>
-                        <p>No tienes aventuras planeadas todavía.</p>
-                        <p style="font-size: 1rem; font-weight: 500;">Haz clic en "Nueva Aventura" o elige un país en el mapa.</p>
-                    </div>
-                `;
-            } else {
-                const listaHTML = document.createElement('div');
-                listaHTML.className = 'lista-paises';
-
-                idsPaises.forEach(id => {
-    const pais = paisesVisitados[id];
-    const numAlbumes = (pais.albumes ? pais.albumes.length : 0) + (pais.historias ? pais.historias.length : 0);
-
-    let provinciasHTML = "";
-
-    if(provinciasVisitadas[id]){
-        const provs = Object.keys(provinciasVisitadas[id]);
-
-        provinciasHTML = `
-        <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
-            ${provs.map(pid=>{
-                const prov = provinciasVisitadas[id][pid];
-                return `<button onclick="abrirAlbumProvincia('${id}','${pid}')" 
-                style="background:none;border:none;color:#546E7A;font-weight:700;text-align:left;cursor:pointer;">
-                📍 ${prov.nombre || pid}
-                </button>`;
-            }).join("")}
-        </div>`;
-    }
-
-    listaHTML.innerHTML += `
-        <div class="tarjeta-pais">
-            <div class="info-pais">
-                <div class="icono-bandera"><i data-lucide="map-pin"></i></div>
-                <div>
-                    <h3 class="nombre-pais-lista">${pais.nombre}</h3>
-                    <span class="zonas-badge">${numAlbumes} memorias</span>
-                    ${provinciasHTML}
-                </div>
-            </div>
-            <button class="btn-accion-pais" onclick="abrirAlbum('${id}')">
-                Ver Álbumes <i data-lucide="chevron-right"></i>
-            </button>
-        </div>`;
-});
-                scrollArea.appendChild(listaHTML);
-            }
-            lucide.createIcons();
-        }
         window.abrirAlbumProvincia = function(countryId, provId){
     // Si no existe ese país en memoria, abortar
     if(!provinciasVisitadas[countryId] || !provinciasVisitadas[countryId][provId]){
@@ -1511,6 +1410,52 @@
             const el = document.getElementById('selector-nuevo-destino');
             el.style.display = 'block';
             el.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.cargarCiudadesAventura = function() {
+            const selectPais = document.getElementById('select-pais-nuevo');
+            const contenedorCiudad = document.getElementById('contenedor-ciudad-aventura');
+            const selectCiudad = document.getElementById('select-ciudad-aventura');
+
+            if (!selectPais || !contenedorCiudad || !selectCiudad) return;
+
+            const idPais = selectPais.value;
+            if (!idPais) {
+                contenedorCiudad.style.display = 'none';
+                selectCiudad.innerHTML = '<option value="" selected>Elegir ciudad (opcional)</option>';
+                return;
+            }
+
+            const nombrePais = selectPais.options[selectPais.selectedIndex]?.text || "";
+            const geoDataPais = d3.select(`.pais[id="${idPais}"]`).datum();
+
+            contenedorCiudad.style.display = 'none';
+            selectCiudad.innerHTML = '<option value="" selected>Cargando ciudades...</option>';
+
+            d3.json(ESTADOS_PROVINCIAS_URL).then(data => {
+                const ciudades = data.features
+                    .filter(feature => provinciaPerteneceAPais(feature, nombrePais, idPais, geoDataPais))
+                    .map(feature => feature.properties.name || feature.properties.name_en || "")
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b));
+
+                const ciudadesUnicas = [...new Set(ciudades)];
+                selectCiudad.innerHTML = '<option value="" selected>Elegir ciudad (opcional)</option>';
+
+                if (ciudadesUnicas.length === 0) return;
+
+                ciudadesUnicas.forEach(ciudad => {
+                    const option = document.createElement('option');
+                    option.value = ciudad;
+                    option.textContent = ciudad;
+                    selectCiudad.appendChild(option);
+                });
+
+                contenedorCiudad.style.display = 'block';
+            }).catch(() => {
+                contenedorCiudad.style.display = 'none';
+                selectCiudad.innerHTML = '<option value="" selected>Elegir ciudad (opcional)</option>';
+            });
         };
 
         window.confirmarNuevoDestino = function() {
