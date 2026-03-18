@@ -758,9 +758,62 @@
                 });
         }
 
+        function obtenerOpcionesPaisParaSonados() {
+            const paisesMapa = d3.selectAll('.pais').data() || [];
+            return paisesMapa
+                .map(d => ({ id: d.id, nombre: d.properties.name }))
+                .sort((a, b) => a.nombre.localeCompare(b.nombre));
+        }
+
+        function poblarSelectorPaisNuevoDestinoSonado() {
+            const selectPais = document.getElementById('select-pais-nuevo');
+            if (!selectPais) return;
+
+            const opcionesPais = obtenerOpcionesPaisParaSonados();
+            selectPais.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
+
+            opcionesPais.forEach(pais => {
+                const option = document.createElement('option');
+                option.value = pais.id;
+                option.textContent = pais.nombre;
+                selectPais.appendChild(option);
+            });
+        }
+
+        function construirTarjetaDestinoSonado(idPais) {
+            const destino = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
+            const totalPasos = destino.itinerario.length;
+            const nombrePrincipal = obtenerNombreCabeceraDestino(destino);
+
+            return `
+                <div class="tarjeta-pais">
+                    <div class="info-pais">
+                        <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
+                        <div><h3 class="nombre-pais-lista">${nombrePrincipal}</h3><span class="zonas-badge">${totalPasos} pasos</span></div>
+                    </div>
+                    <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${idPais}')">Ver Itinerario <i data-lucide="calendar"></i></button>
+                </div>`;
+        }
+
+        function renderizarListaDestinosPorVivir() {
+            const scrollArea = document.getElementById('scroll-sonados');
+            if (!scrollArea) return;
+
+            const idsPaises = Object.keys(destinosSonados);
+            if (idsPaises.length === 0) {
+                scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="compass"></i><p>No tienes aventuras planeadas todavía.</p></div>`;
+                return;
+            }
+
+            const listaDestinos = document.createElement('div');
+            listaDestinos.className = 'lista-paises';
+            listaDestinos.innerHTML = idsPaises.map(idPais => construirTarjetaDestinoSonado(idPais)).join('');
+            scrollArea.innerHTML = '';
+            scrollArea.appendChild(listaDestinos);
+        }
+
         function renderizarPantallaSonados() {
             const contenedor = document.getElementById('vista-por-vivir');
-            const idsPaises = Object.keys(destinosSonados);
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
@@ -773,64 +826,23 @@
                     <h3 style="margin-top:0; color: var(--primary);">¿A dónde quieres ir?</h3>
                     <p style="font-size: 0.9rem; color: #607D8B;">Selecciona tu destino final para empezar a planear:</p>
                     <select id="select-pais-nuevo" onchange="cargarCiudadesAventura()" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 10px; font-family: inherit; font-size: 1rem; background: white;">
-                    <option value="" disabled selected>Elige un país...</option>
-                </select>
-
-                <div id="contenedor-ciudad-aventura" style="display:none;">
-                    <select id="select-ciudad-aventura" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
-                        <option value="" selected>Elegir ciudad (opcional)</option>
+                        <option value="" disabled selected>Elige un país...</option>
                     </select>
-                </div>
+                    <div id="contenedor-ciudad-aventura" style="display:none;">
+                        <select id="select-ciudad-aventura" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
+                            <option value="" selected>Elegir ciudad (opcional)</option>
+                        </select>
+                    </div>
                     <div style="display: flex; gap: 10px;">
                         <button onclick="confirmarNuevoDestino()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Crear Aventura</button>
-                        <button onclick="document.getElementById('selector-nuevo-destino').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
+                        <button onclick="ocultarSelectorNuevoDestinoSonado()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
                     </div>
                 </div>
                 <div class="contenedor-scroll" id="scroll-sonados"></div>
             `;
 
-            const scrollArea = document.getElementById('scroll-sonados');
-
-            setTimeout(() => {
-                const select = document.getElementById('select-pais-nuevo');
-                if (select) {
-                    const paisesMapa = d3.selectAll('.pais').data();
-                    if (paisesMapa && paisesMapa.length > 0) {
-                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
-                        const listaOrdenada = paisesMapa
-                            .map(d => ({ id: d.id, nombre: d.properties.name }))
-                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-                        listaOrdenada.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.nombre;
-                            select.appendChild(opt);
-                        });
-                    }
-                }
-            }, 100);
-
-            if (idsPaises.length === 0) {
-                scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="compass"></i><p>No tienes aventuras planeadas todavía.</p></div>`;
-            } else {
-                const listaHTML = document.createElement('div');
-                listaHTML.className = 'lista-paises';
-                idsPaises.forEach(id => {
-                    const pais = destinosSonados[id];
-                    const numItems = pais.itinerario.length;
-                    const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
-                    listaHTML.innerHTML += `
-                        <div class="tarjeta-pais">
-                            <div class="info-pais">
-                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
-                                <div><h3 class="nombre-pais-lista">${nombrePrincipal}</h3><span class="zonas-badge">${numItems} pasos</span></div>
-                            </div>
-                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
-                        </div>`;
-                });
-                scrollArea.appendChild(listaHTML);
-            }
+            setTimeout(poblarSelectorPaisNuevoDestinoSonado, 100);
+            renderizarListaDestinosPorVivir();
             lucide.createIcons();
         }
 
@@ -1406,13 +1418,28 @@
     lucide.createIcons();
 };
 
-        window.mostrarSelectorNuevoDestino = function() {
-            const el = document.getElementById('selector-nuevo-destino');
-            el.style.display = 'block';
-            el.scrollIntoView({ behavior: 'smooth' });
+        window.ocultarSelectorNuevoDestinoSonado = function() {
+            const selector = document.getElementById('selector-nuevo-destino');
+            const contenedorCiudad = document.getElementById('contenedor-ciudad-aventura');
+            const selectCiudad = document.getElementById('select-ciudad-aventura');
+
+            if (!selector) return;
+
+            selector.style.display = 'none';
+            if (contenedorCiudad) contenedorCiudad.style.display = 'none';
+            if (selectCiudad) selectCiudad.innerHTML = '<option value="" selected>Elegir ciudad (opcional)</option>';
         };
 
-        window.cargarCiudadesAventura = function() {
+        window.mostrarSelectorNuevoDestino = function() {
+            const selector = document.getElementById('selector-nuevo-destino');
+            if (!selector) return;
+
+            poblarSelectorPaisNuevoDestinoSonado();
+            selector.style.display = 'block';
+            selector.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        function cargarCiudadesNuevoDestinoSonado() {
             const selectPais = document.getElementById('select-pais-nuevo');
             const contenedorCiudad = document.getElementById('contenedor-ciudad-aventura');
             const selectCiudad = document.getElementById('select-ciudad-aventura');
@@ -1456,9 +1483,13 @@
                 contenedorCiudad.style.display = 'none';
                 selectCiudad.innerHTML = '<option value="" selected>Elegir ciudad (opcional)</option>';
             });
+        }
+
+        window.cargarCiudadesAventura = function() {
+            cargarCiudadesNuevoDestinoSonado();
         };
 
-        window.confirmarNuevoDestino = function() {
+        function confirmarNuevoDestinoSonado() {
             const select = document.getElementById('select-pais-nuevo');
             const selectCiudad = document.getElementById('select-ciudad-aventura');
             const id = select.value;
@@ -1468,7 +1499,7 @@
             if (!id || id === "") return;
 
             // Ocultar el panel de selección para que no estorbe
-            document.getElementById('selector-nuevo-destino').style.display = 'none';
+            ocultarSelectorNuevoDestinoSonado();
 
             if (!destinosSonados[id]) {
                 destinosSonados[id] = crearDestinoSonadoBase(nombre, ciudadSeleccionada);
@@ -1481,6 +1512,10 @@
             }
 
             abrirPlanificador(id);
+        }
+
+        window.confirmarNuevoDestino = function() {
+            confirmarNuevoDestinoSonado();
         };
 
         window.abrirPlanificador = function(idPais) {
