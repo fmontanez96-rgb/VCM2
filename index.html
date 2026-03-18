@@ -783,7 +783,7 @@
         function construirTarjetaDestinoSonado(idPais) {
             const destino = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
             const totalPasos = destino.itinerario.length;
-            const nombrePrincipal = obtenerNombreCabeceraDestino(destino);
+            const nombrePrincipal = obtenerTituloAventuraCompleto(destino);
 
             return `
                 <div class="tarjeta-pais">
