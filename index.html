@@ -783,13 +783,14 @@
         function construirTarjetaDestinoSonado(idPais) {
             const destino = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
             const totalPasos = destino.itinerario.length;
-            const nombrePrincipal = obtenerTituloAventuraCompleto(destino);
+            const { principal, secundario } = obtenerPartesTituloAventura(destino);
+            const secundarioHTML = secundario ? ` <span class="titulo-destino-escalas">(${secundario})</span>` : '';
 
             return `
                 <div class="tarjeta-pais">
                     <div class="info-pais">
                         <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
-                        <div><h3 class="nombre-pais-lista">${nombrePrincipal}</h3><span class="zonas-badge">${totalPasos} pasos</span></div>
+                        <div><h3 class="nombre-pais-lista"><span class="titulo-destino-principal">${principal}</span>${secundarioHTML}</h3><span class="zonas-badge">${totalPasos} pasos</span></div>
                     </div>
                     <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${idPais}')">Ver Itinerario <i data-lucide="calendar"></i></button>
                 </div>`;
@@ -855,18 +856,7 @@
                 listaHTML.className = 'lista-paises';
 
                 idsPaises.forEach(id => {
-                    const pais = destinosSonados[id];
-                    const numItems = pais.itinerario.length;
-                    const tituloAventura = obtenerTituloAventuraCompleto(pais);
-
-                    listaHTML.innerHTML += `
-                        <div class="tarjeta-pais">
-                            <div class="info-pais">
-                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
-                                <div><h3 class="nombre-pais-lista">${tituloAventura}</h3><span class="zonas-badge">${numItems} pasos</span></div>
-                            </div>
-                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
-                        </div>`;
+                    listaHTML.innerHTML += construirTarjetaDestinoSonado(id);
                 });
 
                 scrollArea.appendChild(listaHTML);
@@ -1563,8 +1553,8 @@
             }
 
             const pais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
-            const tituloAventura = obtenerTituloAventuraCompleto(pais);
-            const nombreVisual = `<span style="color: #FF4081;">${tituloAventura}</span>`;
+            const { principal, secundario } = obtenerPartesTituloAventura(pais);
+            const nombreVisual = `<span class="titulo-destino-principal" style="color: #FF4081;">${principal}</span>${secundario ? ` <span class="titulo-destino-escalas" style="color: #FF4081;">(${secundario})</span>` : ''}`;
 
             scrollArea.innerHTML = `
                 <div class="cabecera-detalle">
@@ -1729,11 +1719,11 @@
             return nombreCiudad ? `${nombrePais}, ${nombreCiudad}` : nombrePais;
         }
 
-        function obtenerTituloAventuraCompleto(pais) {
+        function obtenerPartesTituloAventura(pais) {
             const destino = asegurarEstructuraDestinoSonado(pais);
-            if (!destino) return '';
+            if (!destino) return { principal: '', secundario: '' };
 
-            const baseTitulo = obtenerNombreCabeceraDestino(destino);
+            const principal = obtenerNombreCabeceraDestino(destino);
             const escalasVisibles = [];
             const escalasYaIncluidas = new Set();
 
@@ -1752,7 +1742,15 @@
                 escalasVisibles.push(textoEscala);
             });
 
-            return escalasVisibles.length > 0 ? `${baseTitulo} (${escalasVisibles.join(', ')})` : baseTitulo;
+            return {
+                principal,
+                secundario: escalasVisibles.join(', ')
+            };
+        }
+
+        function obtenerTituloAventuraCompleto(pais) {
+            const { principal, secundario } = obtenerPartesTituloAventura(pais);
+            return secundario ? `${principal} (${secundario})` : principal;
         }
 
         window.cargarCiudadesEscalaViaje = function() {
