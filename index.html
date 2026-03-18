@@ -785,13 +785,14 @@
         function construirTarjetaDestinoSonado(idPais) {
             const destino = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
             const totalPasos = destino.itinerario.length;
-            const tituloAventuraMarkup = construirMarkupTituloAventura(destino);
+            const { principal, secundario } = obtenerPartesTituloAventura(destino);
+            const secundarioHTML = secundario ? ` <span class="titulo-destino-escalas">(${secundario})</span>` : '';
 
             return `
                 <div class="tarjeta-pais">
                     <div class="info-pais">
                         <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
-                        <div><h3 class="nombre-pais-lista">${tituloAventuraMarkup}</h3><span class="zonas-badge">${totalPasos} pasos</span></div>
+                        <div><h3 class="nombre-pais-lista"><span class="titulo-destino-principal">${principal}</span>${secundarioHTML}</h3><span class="zonas-badge">${totalPasos} pasos</span></div>
                     </div>
                     <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${idPais}')">Ver Itinerario <i data-lucide="calendar"></i></button>
                 </div>`;
@@ -857,18 +858,7 @@
                 listaHTML.className = 'lista-paises';
 
                 idsPaises.forEach(id => {
-                    const pais = destinosSonados[id];
-                    const numItems = pais.itinerario.length;
-                    const tituloAventuraMarkup = construirMarkupTituloAventura(pais);
-
-                    listaHTML.innerHTML += `
-                        <div class="tarjeta-pais">
-                            <div class="info-pais">
-                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
-                                <div><h3 class="nombre-pais-lista">${tituloAventuraMarkup}</h3><span class="zonas-badge">${numItems} pasos</span></div>
-                            </div>
-                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
-                        </div>`;
+                    listaHTML.innerHTML += construirTarjetaDestinoSonado(id);
                 });
 
                 scrollArea.appendChild(listaHTML);
@@ -1565,7 +1555,8 @@
             }
 
             const pais = asegurarEstructuraDestinoSonado(destinosSonados[idPais], idPais);
-            const tituloAventuraMarkup = construirMarkupTituloAventura(pais);
+            const { principal, secundario } = obtenerPartesTituloAventura(pais);
+            const nombreVisual = `<span class="titulo-destino-principal" style="color: #FF4081;">${principal}</span>${secundario ? ` <span class="titulo-destino-escalas" style="color: #FF4081;">(${secundario})</span>` : ''}`;
 
             scrollArea.innerHTML = `
                 <div class="cabecera-detalle">
@@ -1684,6 +1675,38 @@
             return construirEscalaNormalizada(escala).resumen;
         }
 
+        function obtenerResumenEscalasAgrupado(destino) {
+            const dataDestino = asegurarEstructuraDestinoSonado(destino);
+            if (!dataDestino || !Array.isArray(dataDestino.escalasDetalle)) return [];
+
+            const escalasAgrupadas = new Map();
+
+            dataDestino.escalasDetalle.forEach(escala => {
+                const escalaNormalizada = construirEscalaNormalizada(escala);
+                if (!escalaNormalizada.pais) return;
+
+                const clavePais = escalaNormalizada.paisId || escalaNormalizada.pais;
+                if (!escalasAgrupadas.has(clavePais)) {
+                    escalasAgrupadas.set(clavePais, {
+                        pais: escalaNormalizada.pais,
+                        ciudades: new Set()
+                    });
+                }
+
+                if (escalaNormalizada.ciudad) {
+                    escalasAgrupadas.get(clavePais).ciudades.add(escalaNormalizada.ciudad);
+                }
+            });
+
+            return Array.from(escalasAgrupadas.values()).map(({ pais, ciudades }) => {
+                if (ciudades.size === 1) {
+                    return Array.from(ciudades)[0];
+                }
+
+                return pais;
+            });
+        }
+
         function asegurarEstructuraDestinoSonado(dataPais, idPais = '') {
             if (!dataPais) return null;
 
@@ -1732,45 +1755,50 @@
 
         function obtenerPartesTituloAventura(pais) {
             const destino = asegurarEstructuraDestinoSonado(pais);
-            if (!destino) return { principal: '', escalas: [] };
+            if (!destino) return { principal: '', secundario: '' };
 
             const principal = obtenerNombreCabeceraDestino(destino);
             const escalasVisibles = [];
             const escalasYaIncluidas = new Set();
 
-            (destino.escalasDetalle || []).forEach(escala => {
+            (destino?.escalasDetalle || []).forEach(escala => {
                 if (!escala) return;
 
-                const ciudadEscala = (escala.ciudad || '').toUpperCase().trim();
-                const paisEscala = (escala.pais || escala.destino || '').toUpperCase().trim();
-                const textoEscala = ciudadEscala || paisEscala;
-                if (!textoEscala) return;
+                const nombrePais = (escala.pais || escala.destino || '').trim();
+                const paisId = (escala.paisId || '').trim();
+                const clavePais = obtenerClaveNormalizadaEscala(paisId || nombrePais);
+                if (!clavePais) return;
 
-                const claveVisible = textoEscala.normalize('NFD').replace(/[̀-ͯ]/g, '');
-                if (escalasYaIncluidas.has(claveVisible)) return;
+                const ciudad = (escala.ciudad || '').trim();
+                const claveCiudad = obtenerClaveNormalizadaEscala(ciudad);
+                let grupoPais = gruposPorPais.get(clavePais);
 
-                escalasYaIncluidas.add(claveVisible);
-                escalasVisibles.push(textoEscala);
+                if (!grupoPais) {
+                    grupoPais = {
+                        nombrePais,
+                        ciudades: [],
+                        ciudadesVistas: new Set()
+                    };
+                    gruposPorPais.set(clavePais, grupoPais);
+                } else if (!grupoPais.nombrePais && nombrePais) {
+                    grupoPais.nombrePais = nombrePais;
+                }
+
+                if (claveCiudad && !grupoPais.ciudadesVistas.has(claveCiudad)) {
+                    grupoPais.ciudadesVistas.add(claveCiudad);
+                    grupoPais.ciudades.push(ciudad);
+                }
             });
 
-            return { principal, escalas: escalasVisibles };
-        }
-
-        function construirMarkupTituloAventura(pais) {
-            const { principal, escalas } = obtenerPartesTituloAventura(pais);
-            const escalasMarkup = escalas.length > 0
-                ? `<span class="titulo-destino-escalas">Escalas: ${escalas.join(', ')}</span>`
-                : '';
-
-            return `
-                <span class="titulo-destino-principal">${principal}</span>
-                ${escalasMarkup}
-            `;
+            return {
+                principal,
+                secundario: escalasVisibles.join(', ')
+            };
         }
 
         function obtenerTituloAventuraCompleto(pais) {
-            const { principal, escalas } = obtenerPartesTituloAventura(pais);
-            return escalas.length > 0 ? `${principal} (${escalas.join(', ')})` : principal;
+            const { principal, secundario } = obtenerPartesTituloAventura(pais);
+            return secundario ? `${principal} (${secundario})` : principal;
         }
 
         window.cargarCiudadesEscalaViaje = function() {
