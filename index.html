@@ -1490,7 +1490,7 @@
             const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
 
             let nombreVisual = `<span style="color: #FF4081;">${nombrePrincipal}</span>`;
-            const listaEscalas = obtenerLabelsEscalas(pais);
+            const listaEscalas = obtenerResumenesEscalas(pais);
             if (listaEscalas.length > 0) {
                 nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${listaEscalas.join(', ').toUpperCase()})</span>`;
             }
@@ -1541,10 +1541,75 @@
             };
         }
 
-        function construirLabelEscala(pais, ciudad = '') {
-            const paisNormalizado = (pais || '').toUpperCase();
-            const ciudadNormalizada = (ciudad || '').toUpperCase();
-            return ciudadNormalizada ? `${paisNormalizado}, ${ciudadNormalizada}` : paisNormalizado;
+        function construirEscalaNormalizada(escala = {}) {
+            const paisNormalizado = (escala.pais || escala.destino || '').toUpperCase();
+            const ciudadNormalizada = (escala.ciudad || '').toUpperCase();
+            const paisId = escala.paisId || escala.destinoId || '';
+            const resumen = ciudadNormalizada || paisNormalizado;
+
+            return {
+                pais: paisNormalizado,
+                paisId,
+                ciudad: ciudadNormalizada,
+                resumen,
+                label: resumen,
+                origen: escala.origen || 'itinerario'
+            };
+        }
+
+        function esMismaEscala(base, candidata) {
+            if (!base || !candidata) return false;
+
+            const baseNormalizada = construirEscalaNormalizada(base);
+            const candidataNormalizada = construirEscalaNormalizada(candidata);
+            const mismoPais = (baseNormalizada.paisId && candidataNormalizada.paisId)
+                ? baseNormalizada.paisId === candidataNormalizada.paisId
+                : baseNormalizada.pais === candidataNormalizada.pais;
+
+            if (!mismoPais) return false;
+            if (baseNormalizada.ciudad && candidataNormalizada.ciudad) {
+                return baseNormalizada.ciudad === candidataNormalizada.ciudad;
+            }
+
+            return true;
+        }
+
+        function upsertEscalaDetalle(dataPais, escala) {
+            if (!dataPais) return null;
+
+            const escalaNormalizada = construirEscalaNormalizada(escala);
+            if (!escalaNormalizada.pais) return null;
+
+            const destinoPrincipal = (dataPais.destinoFinal || '').toUpperCase();
+            const ciudadPrincipal = (dataPais.ciudadDestinoFinal || '').toUpperCase();
+            const esDestinoPrincipal = escalaNormalizada.pais === destinoPrincipal && (
+                !escalaNormalizada.ciudad ||
+                !ciudadPrincipal ||
+                escalaNormalizada.ciudad === ciudadPrincipal
+            );
+
+            if (esDestinoPrincipal) return null;
+            if (!Array.isArray(dataPais.escalasDetalle)) dataPais.escalasDetalle = [];
+
+            const indiceExistente = dataPais.escalasDetalle.findIndex(item => esMismaEscala(item, escalaNormalizada));
+            if (indiceExistente === -1) {
+                dataPais.escalasDetalle.push(escalaNormalizada);
+                return escalaNormalizada;
+            }
+
+            const escalaActualizada = construirEscalaNormalizada({
+                ...dataPais.escalasDetalle[indiceExistente],
+                pais: escalaNormalizada.pais || dataPais.escalasDetalle[indiceExistente].pais,
+                paisId: escalaNormalizada.paisId || dataPais.escalasDetalle[indiceExistente].paisId,
+                ciudad: escalaNormalizada.ciudad || dataPais.escalasDetalle[indiceExistente].ciudad
+            });
+
+            dataPais.escalasDetalle[indiceExistente] = escalaActualizada;
+            return escalaActualizada;
+        }
+
+        function obtenerResumenEscala(escala) {
+            return construirEscalaNormalizada(escala).resumen;
         }
 
         function asegurarEstructuraDestinoSonado(dataPais, idPais = '') {
@@ -1552,52 +1617,32 @@
 
             if (!dataPais.destinoFinal) dataPais.destinoFinal = dataPais.nombre || '';
             if (!Array.isArray(dataPais.itinerario)) dataPais.itinerario = [];
-            if (!Array.isArray(dataPais.escalasDetalle)) {
-                const escalasPaises = Array.isArray(dataPais.escalas) ? dataPais.escalas : [];
-                const escalasCiudades = Array.isArray(dataPais.escalasCiudades) ? dataPais.escalasCiudades : [];
-                const escalasDesdeItinerario = dataPais.itinerario
-                    .filter(item => item && item.tipo === 'viaje' && item.destino)
-                    .map(item => ({
-                        pais: item.destino,
-                        paisId: item.destinoId || '',
-                        ciudad: item.ciudad || '',
-                        label: construirLabelEscala(item.destino, item.ciudad || '')
-                    }));
+            const escalasPaises = Array.isArray(dataPais.escalas) ? dataPais.escalas : [];
+            const escalasCiudades = Array.isArray(dataPais.escalasCiudades) ? dataPais.escalasCiudades : [];
+            const escalasDesdeItinerario = dataPais.itinerario
+                .filter(item => item && item.tipo === 'viaje' && item.destino)
+                .map(item => ({
+                    pais: item.destino,
+                    paisId: item.destinoId || '',
+                    ciudad: item.ciudad || '',
+                    origen: 'itinerario'
+                }));
 
-                const escalasLegacy = escalasPaises.map((paisEscala, index) => {
-                    const ciudadEscala = escalasCiudades.length === escalasPaises.length ? escalasCiudades[index] || '' : '';
-                    return {
-                        pais: paisEscala,
-                        paisId: '',
-                        ciudad: ciudadEscala,
-                        label: construirLabelEscala(paisEscala, ciudadEscala)
-                    };
-                });
+            const escalasLegacy = escalasPaises.map((paisEscala, index) => ({
+                pais: paisEscala,
+                paisId: '',
+                ciudad: escalasCiudades.length === escalasPaises.length ? escalasCiudades[index] || '' : '',
+                origen: 'legacy'
+            }));
 
-                dataPais.escalasDetalle = [...escalasDesdeItinerario, ...escalasLegacy];
-            }
+            const escalasFuente = [
+                ...(Array.isArray(dataPais.escalasDetalle) ? dataPais.escalasDetalle.filter(escala => escala?.origen !== 'itinerario') : []),
+                ...escalasDesdeItinerario,
+                ...escalasLegacy
+            ];
 
-            const destinoPrincipal = (dataPais.destinoFinal || '').toUpperCase();
-            const ciudadPrincipal = (dataPais.ciudadDestinoFinal || '').toUpperCase();
-            dataPais.escalasDetalle = dataPais.escalasDetalle
-                .filter(Boolean)
-                .map(escala => {
-                    const paisEscala = (escala.pais || escala.destino || '').toUpperCase();
-                    const ciudadEscala = (escala.ciudad || '').toUpperCase();
-                    return {
-                        pais: paisEscala,
-                        paisId: escala.paisId || escala.destinoId || '',
-                        ciudad: ciudadEscala,
-                        label: escala.label || construirLabelEscala(paisEscala, ciudadEscala)
-                    };
-                })
-                .filter(escala => escala.pais && (
-                    escala.pais !== destinoPrincipal ||
-                    (escala.ciudad && ciudadPrincipal && escala.ciudad !== ciudadPrincipal)
-                ))
-                .filter((escala, index, escalas) =>
-                    escalas.findIndex(item => item.label === escala.label) === index
-                );
+            dataPais.escalasDetalle = [];
+            escalasFuente.filter(Boolean).forEach(escala => upsertEscalaDetalle(dataPais, escala));
 
             delete dataPais.escalas;
             delete dataPais.escalasCiudades;
@@ -1606,10 +1651,10 @@
             return dataPais;
         }
 
-        function obtenerLabelsEscalas(dataPais) {
+        function obtenerResumenesEscalas(dataPais) {
             const destino = asegurarEstructuraDestinoSonado(dataPais);
             if (!destino) return [];
-            return destino.escalasDetalle.map(escala => escala.label).filter(Boolean);
+            return destino.escalasDetalle.map(obtenerResumenEscala).filter(Boolean);
         }
 
         function obtenerNombreCabeceraDestino(pais) {
@@ -1770,32 +1815,12 @@
                 nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
                 nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
 
-                const paisEscalaNormalizado = escalaNombre ? escalaNombre.toUpperCase() : '';
-                const ciudadEscalaNormalizada = ciudadEscala ? ciudadEscala.toUpperCase() : '';
-                const destinoPrincipal = (dataPais.destinoFinal || '').toUpperCase();
-                const ciudadPrincipal = (dataPais.ciudadDestinoFinal || '').toUpperCase();
-                const esDestinoPrincipal = paisEscalaNormalizado === destinoPrincipal && (
-                    !ciudadEscalaNormalizada ||
-                    !ciudadPrincipal ||
-                    ciudadEscalaNormalizada === ciudadPrincipal
-                );
-
-                if (paisEscalaNormalizado && !esDestinoPrincipal) {
-                    const labelEscala = construirLabelEscala(escalaNombre, ciudadEscala);
-                    const yaExiste = dataPais.escalasDetalle.some(escala =>
-                        (escala.paisId && escalaId && escala.paisId === escalaId && (escala.ciudad || '').toUpperCase() === ciudadEscalaNormalizada) ||
-                        escala.label === labelEscala
-                    );
-
-                    if (!yaExiste) {
-                        dataPais.escalasDetalle.push({
-                            pais: paisEscalaNormalizado,
-                            paisId: escalaId,
-                            ciudad: ciudadEscalaNormalizada,
-                            label: labelEscala
-                        });
-                    }
-                }
+                upsertEscalaDetalle(dataPais, {
+                    pais: escalaNombre,
+                    paisId: escalaId,
+                    ciudad: ciudadEscala,
+                    origen: 'itinerario'
+                });
             } else if (tipo === 'hospedaje') {
                 nuevoItem.hotel = document.getElementById('input-hospedaje-nombre').value || 'Alojamiento';
                 nuevoItem.noches = document.getElementById('input-hospedaje-noches').value || '1';
@@ -1832,7 +1857,16 @@
             }
             items.forEach(item => {
                 let icono = 'circle'; let titulo = ''; let detalles = '';
-                if (item.tipo === 'viaje') { icono = 'bus'; titulo = `Viaje en ${item.medio}`; detalles = `Escala: ${item.destino}${item.ciudad ? `, ${item.ciudad}` : ''}<br>Costo: $${item.costo}`; }
+                if (item.tipo === 'viaje') {
+                    icono = 'bus';
+                    titulo = `Viaje en ${item.medio}`;
+                    const resumenEscala = obtenerResumenEscala({
+                        pais: item.destino,
+                        paisId: item.destinoId,
+                        ciudad: item.ciudad
+                    });
+                    detalles = `Escala: ${resumenEscala || (item.destino || 'SIN ESCALA')}<br>Costo: $${item.costo}`;
+                }
                 else if (item.tipo === 'hospedaje') { icono = 'hotel'; titulo = item.hotel; detalles = `${item.noches} noches - Total: $${item.costo}`; }
                 else if (item.tipo === 'aventura') { icono = 'mountain'; titulo = item.lugar; detalles = `Día: ${item.dia} ($${item.costo})<br>${item.llegada || ''} - ${item.partida || ''}`; }
                 else if (item.tipo === 'restaurante') { icono = 'utensils'; titulo = item.plato; detalles = `Gasto: $${item.precio}`; }
