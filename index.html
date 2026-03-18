@@ -814,6 +814,7 @@
 
         function renderizarPantallaSonados() {
             const contenedor = document.getElementById('vista-por-vivir');
+            const idsPaises = Object.keys(destinosSonados);
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
@@ -841,37 +842,21 @@
                 <div class="contenedor-scroll" id="scroll-sonados"></div>
             `;
 
+            poblarSelectorPaisNuevoDestinoSonado();
+
             const scrollArea = document.getElementById('scroll-sonados');
-
-            setTimeout(() => {
-                const select = document.getElementById('select-pais-nuevo');
-                if (select) {
-                    const paisesMapa = d3.selectAll('.pais').data();
-                    if (paisesMapa && paisesMapa.length > 0) {
-                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
-                        const listaOrdenada = paisesMapa
-                            .map(d => ({ id: d.id, nombre: d.properties.name }))
-                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-                        listaOrdenada.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.nombre;
-                            select.appendChild(opt);
-                        });
-                    }
-                }
-            }, 100);
 
             if (idsPaises.length === 0) {
                 scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="compass"></i><p>No tienes aventuras planeadas todavía.</p></div>`;
             } else {
                 const listaHTML = document.createElement('div');
                 listaHTML.className = 'lista-paises';
+
                 idsPaises.forEach(id => {
                     const pais = destinosSonados[id];
                     const numItems = pais.itinerario.length;
                     const tituloAventura = obtenerTituloAventuraCompleto(pais);
+
                     listaHTML.innerHTML += `
                         <div class="tarjeta-pais">
                             <div class="info-pais">
@@ -881,8 +866,10 @@
                             <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
                         </div>`;
                 });
+
                 scrollArea.appendChild(listaHTML);
             }
+
             lucide.createIcons();
         }
 
