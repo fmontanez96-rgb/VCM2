@@ -1,1693 +1,835 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuestra Historia - Diario de Viajes</title>
-    
-    <!-- Librerías Externas -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet">
-    
-    <style>
-        /* === VARIABLES Y DISEÑO === */
-        :root {
-            --bg-main: #E1F5FE;
-            --panel-bg: #FFFFFF;
-            --primary: #FF4081; 
-            --secondary: #00BCD4; 
-            --text-main: #455A64; 
-            --btn-glow: rgba(255, 64, 129, 0.6); 
-            --btn-glow-sec: rgba(0, 188, 212, 0.6); 
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crónicas del Reino</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --bg: #120d08;
+      --bg-panel: rgba(34, 24, 16, 0.92);
+      --bg-soft: rgba(72, 51, 33, 0.55);
+      --line: #b28a52;
+      --gold: #e4c27a;
+      --gold-soft: #f2dfb0;
+      --ink: #f8f0da;
+      --muted: #d1c3a1;
+      --danger: #9b2d20;
+      --emerald: #3e6a4a;
+      --shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    }
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Quicksand', sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-            background: radial-gradient(circle at top left, #FFFFFF 0%, #E1F5FE 100%);
-        }
+    * { box-sizing: border-box; }
 
-        /* === CONTENEDORES === */
-        .contenedor-principal { display: flex; width: 100%; height: 100%; padding: 15px; box-sizing: border-box; gap: 15px; }
-        
-        .sidebar {
-            width: 280px;
-            background-color: var(--panel-bg);
-            padding: 25px 20px;
-            display: flex;
-            flex-direction: column;
-            border-radius: 35px;
-            box-shadow: 0 10px 25px rgba(0, 188, 212, 0.15), 0 0 0 6px #B3E5FC; 
-            z-index: 10;
-        }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Cormorant Garamond', serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(179, 132, 63, 0.18), transparent 30%),
+        linear-gradient(180deg, rgba(14, 10, 8, 0.95), rgba(14, 10, 8, 0.98)),
+        #120d08;
+    }
 
-        .logo-titulo { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--primary); margin-bottom: 30px; }
-        .logo-titulo h1 { font-size: 1.6rem; margin: 0; font-weight: 900; text-align: center; }
-        .icono-magia { color: #FFCA28; fill: #FFE082; }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 24px 24px;
+      mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+    }
 
-        .menu-lateral { display: flex; flex-direction: column; gap: 18px; }
-        
-        .btn-menu {
-            background: #FFF8FA; border: 3px solid #F8BBD0; color: #D81B60;
-            padding: 14px 20px; border-radius: 50px; cursor: pointer; text-align: left;
-            display: flex; align-items: center; gap: 12px; 
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            font-family: 'Quicksand', sans-serif; font-size: 1.05rem; font-weight: 700;
-        }
-        
-        .btn-menu:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 20px var(--btn-glow); border-color: var(--primary); }
-        .btn-menu.activo { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 25px var(--btn-glow), 0 8px 15px rgba(255, 64, 129, 0.3); transform: translateY(-2px); }
+    .app {
+      width: min(1400px, calc(100% - 32px));
+      margin: 24px auto;
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 20px;
+    }
 
-        .contenido-principal {
-            flex-grow: 1; position: relative; display: flex; flex-direction: column;
-            background: #FFFFFF; border-radius: 35px; box-shadow: 0 10px 25px rgba(0, 188, 212, 0.15), 0 0 0 6px #B3E5FC;
-            overflow: hidden;
-        }
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid rgba(228, 194, 122, 0.4);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+      position: relative;
+      overflow: hidden;
+    }
 
-        .pantalla { display: none; width: 100%; height: 100%; flex-direction: column; }
-        .pantalla-activa { display: flex; animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
+    .panel::before {
+      content: '';
+      position: absolute;
+      inset: 10px;
+      border: 1px solid rgba(228, 194, 122, 0.16);
+      border-radius: 20px;
+      pointer-events: none;
+    }
 
-        /* === ÁREA DEL MAPA === */
-        #world-map { width: 100%; height: 100%; position: relative; overflow: hidden; background: #E1F5FE; border-radius: 35px; }
-        #mapa-svg { width: 100%; height: 100%; cursor: grab; }
-        #mapa-svg:active { cursor: grabbing; }
+    .sidebar {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
 
-        .pais { fill: #CFD8DC; stroke: #FFFFFF; stroke-width: 1.5px; transition: all 0.3s; stroke-linejoin: round; }
-        .pais:hover { fill: #81D4FA; cursor: pointer; }
-        .pais.visitado {fill: #FF0000 !important;}        
-        .pais.sonado { fill: #FFB300; stroke: #FFFFFF; stroke-width: 2px; }
-        .pais.visitado.sonado { fill: #FF7043; } 
-        .provincia.visitada {fill: #FF0000 !important;}        /* === COMPONENTES FLOTANTES === */
-        #tooltip {
-            position: absolute; background: #FFFFFF; border: 4px solid var(--secondary);
-            padding: 10px 20px; border-radius: 30px; color: var(--secondary); pointer-events: none;
-            font-weight: 800; font-size: 1.1rem; box-shadow: 0 0 20px var(--btn-glow-sec); z-index: 2000;
-            transition: opacity 0.2s; transform: translate(-50%, -130%);
-        }
-        .tooltip-oculto { opacity: 0; visibility: hidden; }
-        .tooltip-visible { opacity: 1; visibility: visible; }
+    .brand {
+      text-align: center;
+      border-bottom: 1px solid rgba(228, 194, 122, 0.2);
+      padding-bottom: 20px;
+    }
 
-        #menu-contextual {
-            position: absolute; background: #FFFFFF; border: 4px solid #F8BBD0;
-            border-radius: 25px; padding: 18px; box-shadow: 0 15px 35px rgba(255, 64, 129, 0.2); 
-            z-index: 1000; min-width: 220px;
-        }
-        .menu-oculto { display: none; }
-        .menu-visible { display: block; animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .crest {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle, rgba(228,194,122,0.26), rgba(74,45,18,0.9));
+      border: 1px solid rgba(228, 194, 122, 0.5);
+      color: var(--gold-soft);
+    }
 
-        .menu-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px dashed #F48FB1; padding-bottom: 12px; margin-bottom: 12px; }
-        .menu-titulo { margin: 0; font-size: 1.3rem; font-weight: 900; }
-        .btn-cerrar-menu { background: #FCE4EC; border: none; color: #D81B60; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
-        .btn-cerrar-menu:hover { background: var(--primary); color: white; transform: scale(1.1); }
-        
-        .opciones-menu { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
-        .opciones-menu li { padding: 10px 15px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s; font-size: 1rem; font-weight: 700; color: #546E7A; background: #F5F5F5; }
-        .opciones-menu li:hover { background: #E1F5FE; color: var(--secondary); transform: translateX(5px); box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2); }
+    h1, h2, h3, h4 { font-family: 'Cinzel', serif; margin: 0; }
+    h1 { font-size: clamp(2rem, 4vw, 2.8rem); line-height: 1.05; }
+    .subtitle { margin-top: 10px; color: var(--muted); font-size: 1.16rem; }
 
-        .spin { animation: spin 2s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--gold-soft);
+      margin-bottom: 12px;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
 
-        /* === SECCIÓN DE RECUERDOS Y SOÑADOS === */
-        .encabezado-seccion { padding: 20px 30px; border-bottom: 4px dashed #E1F5FE; background: #FFFFFF; z-index: 5; }
-        h2 { color: var(--primary); font-size: 2rem; font-weight: 900; margin: 0; text-shadow: 2px 2px 0px #F8BBD0; display: flex; align-items: center; gap: 15px;}
-        
-        .contenedor-scroll { flex-grow: 1; overflow-y: auto; padding: 30px; background: #FAFAFA; }
-        
-        .lista-paises { display: flex; flex-direction: column; gap: 20px; }
-        .tarjeta-pais { 
-            background: #FFFFFF; border: 3px solid #B3E5FC; border-radius: 25px; padding: 20px; 
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 8px 15px rgba(0, 188, 212, 0.08); transition: all 0.3s ease;
-        }
-        .tarjeta-pais:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0, 188, 212, 0.2); border-color: var(--secondary); }
-        .info-pais { display: flex; align-items: center; gap: 15px; }
-        .icono-bandera { width: 50px; height: 50px; background: #E1F5FE; color: var(--secondary); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
-        .nombre-pais-lista { font-size: 1.4rem; font-weight: 800; color: #455A64; margin: 0; }
-        .zonas-badge { background: #FCE4EC; color: #D81B60; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 5px; display: inline-block; }
-        
-        .btn-accion-pais { 
-            background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 50px; 
-            font-family: 'Quicksand', sans-serif; font-size: 1.1rem; font-weight: 800; cursor: pointer; 
-            transition: all 0.2s; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px var(--btn-glow);
-        }
-        .btn-accion-pais.secundario { background: #FFB300; box-shadow: 0 5px 15px rgba(255, 179, 0, 0.4); }
-        .btn-accion-pais:hover { transform: scale(1.05); filter: brightness(1.1); }
+    .selector-grid,
+    .tone-grid {
+      display: grid;
+      gap: 10px;
+    }
 
-        .mensaje-vacio { text-align: center; padding: 50px 20px; color: #90A4AE; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .mensaje-vacio svg { width: 80px; height: 80px; color: #CFD8DC; }
-        .mensaje-vacio p { font-size: 1.3rem; font-weight: 700; max-width: 400px; line-height: 1.5; }
+    .selector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tone-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-        /* Pantallas Detalle */
-        .cabecera-detalle { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 3px solid #E1F5FE; margin-bottom: 20px; gap: 20px; flex-wrap: wrap; }
-        .btn-volver { 
-            background: #FFFFFF; border: 3px solid #CFD8DC; color: #546E7A; width: 45px; height: 45px; 
-            border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; 
-        }
-        .btn-volver:hover { border-color: var(--secondary); color: var(--secondary); transform: translateX(-5px); }
-        
-        .btn-borrar-itinerario {
-            background: #FFEBEE; border: 2px solid #FFCDD2; color: #F44336;
-            padding: 10px 18px; border-radius: 15px; font-weight: bold; font-family: 'Quicksand'; font-size: 1rem;
-            cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;
-        }
-        .btn-borrar-itinerario:hover { background: #F44336; color: white; border-color: #F44336; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3); }
+    .choice {
+      border: 1px solid rgba(228, 194, 122, 0.25);
+      background: rgba(255,255,255,0.02);
+      border-radius: 18px;
+      padding: 14px 14px 12px;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
 
-        .galeria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .tarjeta-agregar { 
-            border: 4px dashed #B3E5FC; background: #F0FBFF; border-radius: 25px; height: 200px; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            color: var(--secondary); cursor: pointer; transition: all 0.3s; font-weight: 800; font-size: 1.1rem; gap: 15px;
-        }
-        .tarjeta-agregar:hover { background: #E1F5FE; transform: scale(1.03); }
+    .choice:hover,
+    .choice.active {
+      transform: translateY(-2px);
+      border-color: rgba(228, 194, 122, 0.75);
+      background: linear-gradient(180deg, rgba(120, 84, 38, 0.28), rgba(255,255,255,0.03));
+      box-shadow: 0 0 0 1px rgba(228, 194, 122, 0.2);
+    }
 
-        /* === ITINERARIO === */
-        .panel-creacion { background: #FFFFFF; border: 3px solid #E1F5FE; border-radius: 25px; padding: 20px; margin-bottom: 30px; }
-        .botones-tipos { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-        .btn-tipo-item { 
-            background: #F5F5F5; border: 2px solid #CFD8DC; color: #546E7A; padding: 10px 15px; border-radius: 15px;
-            font-family: 'Quicksand', sans-serif; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
-        }
-        .btn-tipo-item:hover, .btn-tipo-item.seleccionado { background: #E1F5FE; border-color: var(--secondary); color: var(--secondary); transform: translateY(-2px); }
-        
-        .formulario-itinerario { display: none; background: #F0FBFF; padding: 20px; border-radius: 20px; border: 2px dashed #B3E5FC; }
-        .formulario-itinerario.activo { display: block; animation: scaleIn 0.3s ease; }
-        .campo-form { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
-        .campo-form label { font-weight: 800; color: #455A64; font-size: 0.95rem; }
-        .campo-form input, .campo-form select { 
-            padding: 12px; border: 2px solid #CFD8DC; border-radius: 12px; font-family: 'Quicksand', sans-serif; font-weight: 600; color: #455A64; outline: none; transition: 0.2s; 
-        }
-        .campo-form input:focus, .campo-form select:focus { border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2); }
-        .btn-guardar-item { background: var(--secondary); color: white; border: none; padding: 12px 20px; border-radius: 15px; font-weight: bold; font-family: 'Quicksand'; font-size: 1.1rem; cursor: pointer; width: 100%; transition: 0.2s; }
-        .btn-guardar-item:hover { background: #00ACC1; transform: translateY(-2px); box-shadow: 0 5px 15px var(--btn-glow-sec); }
+    .choice strong {
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      color: var(--gold-soft);
+    }
 
-        .linea-tiempo { position: relative; padding-left: 30px; margin-top: 20px; }
-        .linea-tiempo::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 4px; background: #E1F5FE; border-radius: 4px; }
-        
-        .item-timeline { position: relative; margin-bottom: 25px; background: #FFFFFF; border: 2px solid #E1F5FE; border-radius: 20px; padding: 15px 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: 0.2s; }
-        .item-timeline:hover { border-color: #B3E5FC; transform: translateX(5px); }
-        
-        .punto-timeline { 
-            position: absolute; left: -30px; top: 20px; width: 24px; height: 24px; border-radius: 50%; 
-            display: flex; justify-content: center; align-items: center; background: white; border: 4px solid var(--secondary); z-index: 2;
-        }
-        .item-timeline.viaje .punto-timeline { border-color: #FFB300; }
-        .item-timeline.hospedaje .punto-timeline { border-color: #9C27B0; }
-        .item-timeline.aventura .punto-timeline { border-color: #4CAF50; }
-        .item-timeline.restaurante .punto-timeline { border-color: #FF5252; }
+    .choice span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.1;
+    }
 
-        .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .item-titulo { font-size: 1.2rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px; }
-        .item-detalles { color: #546E7A; font-weight: 600; font-size: 0.95rem; display: flex; flex-direction: column; gap: 5px; }
-        .badge-horario { background: #F5F5F5; padding: 3px 8px; border-radius: 10px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; color: #78909C; }
-        .btn-eliminar-item { background: none; border: none; color: #FFCDD2; cursor: pointer; transition: 0.2s; }
-        .btn-eliminar-item:hover { color: #F44336; transform: scale(1.1); }
+    .inputs {
+      display: grid;
+      gap: 14px;
+    }
 
-    </style>
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--gold-soft);
+      font-size: 1.02rem;
+      font-weight: 700;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid rgba(228, 194, 122, 0.28);
+      border-radius: 16px;
+      background: rgba(7, 5, 4, 0.45);
+      color: var(--ink);
+      padding: 14px 16px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea { min-height: 180px; resize: vertical; }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(228, 194, 122, 0.7);
+      box-shadow: 0 0 0 3px rgba(228, 194, 122, 0.14);
+    }
+
+    .hint {
+      font-size: 0.96rem;
+      color: var(--muted);
+      line-height: 1.2;
+    }
+
+    .cta {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: none;
+      padding: 16px 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #a67b3c, #e4c27a);
+      color: #24170b;
+      font-family: 'Cinzel', serif;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 14px 28px rgba(228, 194, 122, 0.18);
+    }
+
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 18px 32px rgba(228, 194, 122, 0.25); }
+
+    .content {
+      padding: 28px;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 20px;
+      min-height: calc(100vh - 48px);
+    }
+
+    .hero {
+      padding: 24px;
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, rgba(118, 84, 38, 0.25), rgba(22, 15, 10, 0.3)),
+        rgba(255,255,255,0.02);
+      border: 1px solid rgba(228, 194, 122, 0.22);
+    }
+
+    .hero h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 10px; }
+    .hero p { margin: 0; color: var(--muted); font-size: 1.16rem; max-width: 820px; }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .insight {
+      padding: 18px;
+      border-radius: 20px;
+      background: var(--bg-soft);
+      border: 1px solid rgba(228, 194, 122, 0.18);
+    }
+
+    .insight small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .insight strong {
+      color: var(--gold-soft);
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: 20px;
+      min-height: 0;
+    }
+
+    .card-stage,
+    .story-panel,
+    .gallery-panel {
+      background: rgba(255,255,255,0.02);
+      border-radius: 24px;
+      border: 1px solid rgba(228, 194, 122, 0.22);
+      padding: 22px;
+    }
+
+    .card-stage {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .fantasy-card {
+      width: min(100%, 360px);
+      aspect-ratio: 3 / 4.35;
+      border-radius: 28px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(233, 217, 181, 0.95), rgba(196, 166, 106, 0.85));
+      box-shadow: 0 18px 38px rgba(0,0,0,0.35);
+      border: 2px solid rgba(92, 57, 20, 0.75);
+      color: #2c1d0f;
+      position: relative;
+    }
+
+    .fantasy-card::before,
+    .fantasy-card::after {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      border-radius: 22px;
+      border: 1px solid rgba(92, 57, 20, 0.28);
+      pointer-events: none;
+    }
+
+    .card-shell {
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      border: 2px solid rgba(92, 57, 20, 0.45);
+      background: linear-gradient(180deg, rgba(246, 234, 204, 0.95), rgba(224, 196, 138, 0.92));
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 10px;
+    }
+
+    .card-topline,
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .card-title {
+      text-align: center;
+      font-family: 'Cinzel', serif;
+      font-weight: 800;
+      font-size: clamp(1.2rem, 2vw, 1.55rem);
+    }
+
+    .card-art {
+      border-radius: 18px;
+      border: 2px solid rgba(92, 57, 20, 0.4);
+      overflow: hidden;
+      background: #3b2817;
+      min-height: 0;
+    }
+
+    .card-art svg { width: 100%; height: 100%; display: block; }
+
+    .card-story {
+      font-size: 1.04rem;
+      line-height: 1.1;
+      text-align: center;
+    }
+
+    .story-panel {
+      display: grid;
+      grid-template-rows: auto auto auto minmax(0, 1fr);
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .story-box,
+    .prompt-box,
+    .gallery-panel {
+      color: var(--muted);
+    }
+
+    .story-box,
+    .prompt-box {
+      background: rgba(0, 0, 0, 0.18);
+      border: 1px solid rgba(228, 194, 122, 0.12);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .story-box strong,
+    .prompt-box strong,
+    .gallery-panel strong {
+      display: block;
+      color: var(--gold-soft);
+      font-family: 'Cinzel', serif;
+      margin-bottom: 8px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(228, 194, 122, 0.12);
+      border: 1px solid rgba(228, 194, 122, 0.18);
+      color: var(--gold-soft);
+      font-size: 0.95rem;
+    }
+
+    .gallery-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .memory-card {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(228, 194, 122, 0.14);
+    }
+
+    .memory-card h4 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+      color: var(--gold-soft);
+    }
+
+    .memory-card p {
+      margin: 0;
+      font-size: 0.98rem;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      width: 100%;
+      min-height: 320px;
+      border-radius: 22px;
+      border: 1px dashed rgba(228, 194, 122, 0.28);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 24px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      border: 0;
+    }
+
+    @media (max-width: 1100px) {
+      .app,
+      .result-grid,
+      .insight-grid { grid-template-columns: 1fr; }
+      .content { min-height: auto; }
+    }
+
+    @media (max-width: 720px) {
+      .app { width: min(100% - 20px, 1400px); margin: 10px auto 18px; }
+      .sidebar, .content { padding: 18px; }
+      .selector-grid, .tone-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <div class="contenedor-principal">
-        <aside class="sidebar">
-            <div class="logo-titulo">
-                <i data-lucide="sparkles" class="icono-magia"></i>
-                <h1>Nuestra<br>Historia</h1>
-            </div>
-            <nav class="menu-lateral">
-                <button class="btn-menu activo" data-target="vista-explora" onclick="irAPantalla('vista-explora')">
-                    <i data-lucide="globe"></i> Mundo Entero
-                </button>
-                <button class="btn-menu" data-target="vista-vividas" onclick="irAPantalla('vista-vividas')">
-                    <i data-lucide="camera"></i> Recuerdos
-                </button>
-                <button class="btn-menu" data-target="vista-por-vivir" onclick="irAPantalla('vista-por-vivir')">
-                    <i data-lucide="heart"></i> Destinos Soñados
-                </button>
-            </nav>
-        </aside>
-
-        <main class="contenido-principal">
-            <div id="vista-explora" class="pantalla pantalla-activa">
-                <div id="world-map"></div>
-                <div id="tooltip" class="tooltip-oculto"><span id="tooltip-nombre"></span></div>
-                <div id="menu-contextual" class="menu-oculto"></div>
-            </div>
-
-            <div id="vista-vividas" class="pantalla"></div>
-            <div id="vista-por-vivir" class="pantalla"></div>
-        </main>
-    </div>
-
-    <script>
-        lucide.createIcons();
-
-        // BASES DE DATOS EN MEMORIA
-        let paisesVisitados = {};
-        let provinciasVisitadas = {}; 
-        let destinosSonados = {}; 
-
-        window.irAPantalla = function(targetId) {
-            document.querySelectorAll('.btn-menu').forEach(b => {
-                if(b.getAttribute('data-target') === targetId) b.classList.add('activo');
-                else b.classList.remove('activo');
-            });
-            document.querySelectorAll('.pantalla').forEach(p => {
-                p.classList.remove('pantalla-activa');
-                p.style.display = 'none';
-            });
-            
-            const targetPanel = document.getElementById(targetId);
-            if (targetPanel) {
-                targetPanel.style.display = 'flex';
-                targetPanel.classList.add('pantalla-activa');
-            }
-
-            if (targetId === 'vista-vividas') renderizarPantallaRecuerdos();
-            if (targetId === 'vista-por-vivir') renderizarPantallaSonados();
-        };
-
-        function cargarMapa() {
-            const width = 800;
-            const height = 450;
-            const container = d3.select("#world-map");
-            container.selectAll("*").remove();
-
-            const svg = container.append("svg")
-                .attr("viewBox", `0 0 ${width} ${height}`)
-                .attr("preserveAspectRatio", "xMidYMid meet")
-                .attr("id", "mapa-svg");
-
-            const g = svg.append("g").attr("id", "contenedor-mundo");
-
-            const zoom = d3.zoom()
-                .scaleExtent([1, 8]) 
-                .on("zoom", (event) => {
-                    g.attr("transform", event.transform);
-                    g.selectAll(".pais").style("stroke-width", 1.5 / event.transform.k + "px");
-                });
-
-            svg.call(zoom);
-
-            const projection = d3.geoMercator()
-                .scale(120) 
-                .translate([width / 2, height / 1.4]);
-
-            const path = d3.geoPath().projection(projection);
-
-            d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(function(data) {
-                
-                const indiceUSA = data.features.findIndex(f => f.id === "USA");
-                if (indiceUSA !== -1) {
-                    const usaFeature = data.features[indiceUSA];
-                    
-                    if (usaFeature.geometry && usaFeature.geometry.type === "MultiPolygon") {
-                        const poligonosUSA = [];
-                        const poligonosAlaska = [];
-                        usaFeature.geometry.coordinates.forEach(poligono => {
-                            const longitud = poligono[0][0][0];
-                            const latitud = poligono[0][0][1]; 
-                            if (latitud > 50) poligonosAlaska.push(poligono);
-                            else if (longitud < -130 || latitud < 24) {} 
-                            else poligonosUSA.push(poligono);
-                        });
-                        usaFeature.geometry.coordinates = poligonosUSA;
-                        if (poligonosAlaska.length > 0) {
-                            const alaskaFeature = JSON.parse(JSON.stringify(usaFeature)); 
-                            alaskaFeature.id = "USA-AK"; 
-                            alaskaFeature.properties.name = "Alaska";
-                            alaskaFeature.geometry.coordinates = poligonosAlaska;
-                            data.features.push(alaskaFeature);
-                        }
-                    }
-                }
-
-                g.selectAll("path")
-                    .data(data.features)
-                    .enter()
-                    .append("path")
-                    .attr("id", d => d.id) // Identificador para poder pintarlo
-                    .attr("class", (d) => {
-                        const idPais = d.id;
-                        let clases = "pais";
-                        if (idPais) {
-                            if (paisesVisitados[idPais]) clases += " visitado";
-                            if (destinosSonados[idPais]) clases += " sonado";
-                        }
-                        return clases;
-                    })
-                    .attr("d", path)
-                    .on("mouseover", function(event, d) {
-                        const [x, y] = d3.pointer(event, document.getElementById("world-map"));
-                        const tooltip = d3.select("#tooltip");
-                        tooltip.select("#tooltip-nombre").text(d.properties.name);
-                        tooltip.style("left", x + "px").style("top", y + "px")
-                               .classed("tooltip-oculto", false).classed("tooltip-visible", true);
-                    })
-                    .on("mouseout", function() {
-                        d3.select("#tooltip").classed("tooltip-visible", false).classed("tooltip-oculto", true);
-                    })
-                    .on("click", function(event, d) {
-                        event.stopPropagation();
-                        
-                        const nombrePais = d.properties.name;
-                        const idPais = d.id; 
-                        const [x, y] = d3.pointer(event, document.getElementById("world-map"));
-                        const menu = d3.select("#menu-contextual");
-                        const elementoPais = d3.select(this);
-
-                        const esVisitado = elementoPais.classed("visitado");
-                        const esSonado = destinosSonados[idPais] ? true : false;
-                        const colorTitulo = esVisitado ? "#00BCD4" : (esSonado ? "#FFB300" : "#FF4081"); 
-                        
-                        // Menú Actualizado según instrucciones
-                        menu.html(`
-                            <div class="menu-header">
-                                <h3 class="menu-titulo" style="color: ${colorTitulo};">${nombrePais}</h3>
-                                <button id="cerrar-menu" class="btn-cerrar-menu">&times;</button>
-                            </div>
-                            <ul class="opciones-menu">
-                                ${idPais && idPais !== "-99" ? `<li id="opc-visitado"><i data-lucide="${esVisitado ? "circle" : "check-circle"}"></i> ${esVisitado ? "Por visitar" : "¡Ya estuve aquí!"}</li>` : ''}
-                                ${(idPais && idPais !== "-99" && esVisitado) ? `<li id="opc-recuerdos"><i data-lucide="camera"></i> Ver Recuerdos</li>` : ''}
-                                ${idPais && idPais !== "-99" ? `<li id="opc-planear"><i data-lucide="map"></i> Planear Aventura</li>` : ''}
-                                ${idPais && idPais !== "-99" ? `<li id="opc-explorar"><i data-lucide="search"></i> Explorar Zonas</li>` : ''}
-                            </ul>
-                        `);
-
-                        lucide.createIcons();
-                        menu.classed("menu-oculto", false).classed("menu-visible", true);
-
-                        const menuWidth = menu.node().offsetWidth;
-                        const menuHeight = menu.node().offsetHeight;
-                        const mapWidth = document.getElementById("world-map").offsetWidth;
-                        const mapHeight = document.getElementById("world-map").offsetHeight;
-
-                        let finalX = x + 15; 
-                        let finalY = y + 15;
-                        if (finalX + menuWidth > mapWidth) finalX = x - menuWidth - 15;
-                        if (finalY + menuHeight > mapHeight) finalY = y - menuHeight - 15;
-                        if (finalX < 10) finalX = 10;
-                        if (finalY < 10) finalY = 10;
-
-                        menu.style("left", finalX + "px").style("top", finalY + "px");
-
-                        if (idPais && idPais !== "-99") {
-                            d3.select("#opc-visitado").on("click", function() {
-                                if (!esVisitado) {
-                                    paisesVisitados[idPais] = { nombre: nombrePais, zonas: [] };
-                                    elementoPais.classed("visitado", true); 
-                                } else {
-                                    delete paisesVisitados[idPais];
-                                    elementoPais.classed("visitado", false); 
-                                }
-                                menu.classed("menu-visible", false).classed("menu-oculto", true);
-                            });
-
-                            // Nuevo Listener para "Ver Recuerdos"
-                            if (esVisitado) {
-                                d3.select("#opc-recuerdos").on("click", function() {
-                                    menu.classed("menu-visible", false).classed("menu-oculto", true);
-                                    irAPantalla('vista-vividas');
-                                    setTimeout(() => abrirAlbum(idPais), 50);
-                                });
-                            }
-
-                            // Planear aventura se queda fijo
-                            d3.select("#opc-planear").on("click", function() {
-                                if (!esSonado) {
-                                    destinosSonados[idPais] = { nombre: nombrePais, itinerario: [] };
-                                    elementoPais.classed("sonado", true);
-                                }
-                                menu.classed("menu-visible", false).classed("menu-oculto", true);
-                                
-                                irAPantalla('vista-por-vivir');
-                                setTimeout(() => abrirPlanificador(idPais), 50);
-                            });
-
-                            d3.select("#opc-explorar").on("click", function() {
-                                menu.classed("menu-visible", false).classed("menu-oculto", true);
-                                abrirPantallaPais(idPais, nombrePais, d);
-                            });
-                        }
-
-                        d3.select("#cerrar-menu").on("click", () => menu.classed("menu-visible", false).classed("menu-oculto", true));
-
-                        d3.select("body").on("click.menu-cerrar", function(e) {
-                            if (!menu.node().contains(e.target)) {
-                                menu.classed("menu-visible", false).classed("menu-oculto", true);
-                                d3.select("body").on("click.menu-cerrar", null);
-                            }
-                        });
-                    });
-            });
-        }
-
-       function abrirPantallaPais(idPais, nombrePais, geoData) {
-
-    const width = 800;
-    const height = 450;
-
-    const container = d3.select("#world-map");
-
-    d3.select("#mapa-svg").style("display", "none");
-
-    const svgPais = container.append("svg")
-        .attr("viewBox", `0 0 ${width} ${height}`)
-        .attr("id", "mapa-detalle");
-
-    const gDetalle = svgPais.append("g");
-
-    let projection;
-
-if (nombrePais === "Russia") {
-
-    projection = d3.geoMercator()
-        .center([100, 60])   // centra Siberia
-        .scale(250)
-        .translate([width/2, height/2]);
-
-}if (nombrePais === "Russia") {
-
-    geoData = JSON.parse(JSON.stringify(geoData));
-
-    geoData.geometry.coordinates = geoData.geometry.coordinates.map(poly => {
-
-        return poly.map(ring => {
-
-            return ring.map(coord => {
-
-                let lon = coord[0];
-
-                if (lon < -150) lon += 360;
-
-                return [lon, coord[1]];
-
-            });
-            
-
-        });
-
-    });
-
-} 
-else {
-
-    projection = d3.geoMercator()
-        .fitExtent([[40,40],[width-80,height-80]], geoData);
-
-}
-
-    const path = d3.geoPath().projection(projection);
-
-    gDetalle.append("path")
-        .datum(geoData)
-        .attr("d", path)
-        .style("fill","#B2EBF2")
-        .style("stroke","#00BCD4")
-        .style("stroke-width","3");
-
-    // Cargar provincias del mundo
-    d3.json("mapas/estados_provincias.json").then(function(data){
-
-        // FILTRAR SOLO PROVINCIAS DEL PAIS
-        const provincias = data.features.filter(p =>
-            p.properties.admin === nombrePais
-        );
-
-        gDetalle.selectAll(".provincia")
-            .data(provincias)
-            .enter()
-            .append("path")
-            .attr("class","provincia")
-            .attr("id", function(d){
-                // usa d.id si existe, sino una versión segura del nombre
-                return d.id || (d.properties.iso_3166_2 || d.properties.name || d.properties.name_en).replace(/\s+/g,'_');
-            })
-            .attr("d", path)
-            .style("fill", function(d){
-                const provId = d.id || (d.properties.iso_3166_2 || d.properties.name || d.properties.name_en);
-                // Aquí es donde le damos el toque rojo pasión si ya estuviste ahí
-                if (provinciasVisitadas[idPais] && provinciasVisitadas[idPais][provId]) return "#FF0000";
-                if (destinosSonados[idPais] && destinosSonados[idPais].provincias && destinosSonados[idPais].provincias[provId]) return "#FFB300";
-                return "#ffffff";
-            })
-    .style("stroke","#FF4081")
-    .style("stroke-width","1.2px")
-
-            .on("mouseover", function(event,d){
-
-                const nombre =
-                    d.properties.name ||
-                    d.properties.name_en ||
-                    "Provincia";
-
-                const [x,y] = d3.pointer(event,container.node());
-
-                d3.select("#tooltip")
-                    .style("left",x+"px")
-                    .style("top",y+"px")
-                    .classed("tooltip-visible",true);
-
-                d3.select("#tooltip-nombre").text(nombre);
-
-                d3.select(this).style("fill","#F8BBD0");
-
-            })
-
-            .on("mouseout",function(){
-
-                d3.select("#tooltip")
-                    .classed("tooltip-visible",false);
-
-                d3.select(this).style("fill","#ffffff");
-
-            })
-
-            .on("click",function(event,d){
-
-    event.stopPropagation();
-
-    const nombreProvincia =
-        d.properties.name ||
-        d.properties.name_en ||
-        "Provincia";
-
-    const idProvincia =
-        d.properties.id ||
-        d.properties.name ||
-        Math.random().toString(36).substring(7);
-
-    const [x,y] = d3.pointer(event,container.node());
-
-    const menu = d3.select("#menu-contextual");
-
-    const esVisitada =
-        provinciasVisitadas[idPais] &&
-        provinciasVisitadas[idPais][idProvincia];
-
-    menu.html(`
-        <div class="menu-header">
-            <h3 class="menu-titulo" style="color:#FF4081">${nombreProvincia}</h3>
-            <button id="cerrar-menu" class="btn-cerrar-menu">&times;</button>
+  <div class="app">
+    <aside class="panel sidebar">
+      <section class="brand">
+        <div class="crest"><i data-lucide="shield-half"></i></div>
+        <h1>Crónicas<br>del Reino</h1>
+        <p class="subtitle">Una interfaz medieval para transformar historias en cartas fantásticas.</p>
+      </section>
+
+      <section>
+        <div class="section-title"><i data-lucide="scroll-text"></i><span>¿De qué hablaremos?</span></div>
+        <div class="selector-grid" id="topicSelector"></div>
+      </section>
+
+      <section>
+        <div class="section-title"><i data-lucide="wand-sparkles"></i><span>Estética de la carta</span></div>
+        <div class="tone-grid" id="toneSelector"></div>
+      </section>
+
+      <section class="inputs">
+        <div>
+          <label for="subjectName">Nombre del protagonista o elemento</label>
+          <input id="subjectName" type="text" placeholder="Ej: La Reina de Ceniza, mi ex, el Martillo del Eclipse..." />
         </div>
+        <div>
+          <label for="storyInput">Historia o descripción</label>
+          <textarea id="storyInput" placeholder="Cuenta la historia. La carta tomará la narrativa y la convertirá en una representación fantástica."></textarea>
+          <p class="hint">Ejemplo: “Mi ex fue cruel y manipuladora, así que la carta la retrata como un demonio coronado por fuego oscuro”.</p>
+        </div>
+        <button class="cta" id="generateButton">
+          <i data-lucide="sparkles"></i>
+          Invocar carta legendaria
+        </button>
+      </section>
+    </aside>
 
-        <ul class="opciones-menu">
+    <main class="panel content">
+      <section class="hero">
+        <h2>Selector narrativo para seres, leyendas, reliquias y mundos</h2>
+        <p>El generador separa el tema principal de la historia y aplica una fantasía visual según el tono elegido: monstruo, leyendas, lúgubres o humanos. La carta se muestra en pantalla con una estética medieval y una interpretación visual de la historia.</p>
+      </section>
 
-            <li id="opc-prov-visitado">
-                <i data-lucide="check-circle"></i>
-                ${esVisitada ? "Quitar visita" : "¡Ya estuve aquí!"}
-            </li>
+      <section class="insight-grid">
+        <article class="insight">
+          <small>Categoría actual</small>
+          <strong id="activeTopicLabel">Ser o Entidad</strong>
+        </article>
+        <article class="insight">
+          <small>Familia visual</small>
+          <strong id="activeToneLabel">Monstruo</strong>
+        </article>
+        <article class="insight">
+          <small>Lectura arcana</small>
+          <strong id="activeReading">La carta espera una historia.</strong>
+        </article>
+      </section>
 
-            <li id="opc-prov-planear">
-                <i data-lucide="map"></i>
-                Planear aventura
-            </li>
-
-        </ul>
-    `);
-
-    lucide.createIcons();
-
-    menu.classed("menu-oculto",false)
-        .classed("menu-visible",true)
-        .style("left",x+"px")
-        .style("top",y+"px");
-d3.select("#opc-prov-visitado").on("click",function(){
-
-    if(!provinciasVisitadas[idPais]){
-        provinciasVisitadas[idPais]={};
-    }
-
-    const provNode = d3.select(this); // no es el path; vamos a buscar el path por su id
-    const selectorPath = `#${CSS.escape(idProvincia)}`;
-    const pathElem = d3.select(selectorPath);
-
-    if(!provinciasVisitadas[idPais][idProvincia]){
-
-        // marcar como visitada en memoria
-        provinciasVisitadas[idPais][idProvincia]={
-            nombre:nombreProvincia
-        };
-
-        // marcar visualmente la provincia
-        pathElem.classed('visitada', true);
-
-        // asegurar que el país también exista en recuerdos
-        if(!paisesVisitados[idPais]){
-            paisesVisitados[idPais]={
-                nombre: nombrePais,
-                albumes: [],
-                historias: [],
-                musica: null
-            };
-        }
-
-        // marcar país visual (si querés que el país cambie cuando cualquier provincia se visite)
-        d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
-
-    } else {
-
-        // quitar marca en memoria
-        delete provinciasVisitada[idPais][idProvincia];
-
-        // quitar marca visual
-        pathElem.classed('visitada', false);
-
-        // si el país NO tiene más provincias visitadas, opcionalmente quitar la marca país
-        const restantes = Object.keys(provinciasVisitadas[idPais] || {}).length;
-        if (restantes === 0) {
-            // si el país no tiene recuerdos propios (albumes/historias), lo dejamos no-visitado
-            const tieneRecuerdosPais = paisesVisitados[idPais] && ((paisesVisitados[idPais].albumes && paisesVisitados[idPais].albumes.length>0) || (paisesVisitados[idPais].historias && paisesVisitados[idPais].historias.length>0));
-            if(!tieneRecuerdosPais){
-                d3.select(`.pais[id="${idPais}"]`).classed('visitado', false);
-            }
-        }
-
-    }
-
-    menu.classed("menu-visible",false)
-        .classed("menu-oculto",true);
-
-    renderizarPantallaRecuerdos();
-
-});
-
-
-
-    d3.select("#opc-prov-planear").on("click",function(){
-
-        if(!destinosSonados[idPais]){
-
-            destinosSonados[idPais]={
-                nombre:nombrePais,
-                itinerario:[]
-            };
-
-        }
-
-        menu.classed("menu-visible",false)
-            .classed("menu-oculto",true);
-
-        irAPantalla('vista-por-vivir');
-
-        setTimeout(()=>abrirPlanificador(idPais),50);
-
-    });
-
-
-
-    d3.select("#cerrar-menu")
-        .on("click",()=>menu.classed("menu-visible",false)
-        .classed("menu-oculto",true));
-
-});
-
-    });
-
-    mostrarBotonRegreso();
-}
-
-        function mostrarBotonRegreso() {
-            d3.select("#btn-volver-mapa").remove(); 
-            d3.select("#world-map").append("button").attr("id", "btn-volver-mapa")
-                .style("position", "absolute").style("bottom", "25px").style("left", "50%").style("transform", "translateX(-50%)").style("z-index", "100")
-                .style("background", "linear-gradient(45deg, #FF4081, #FF80AB)").style("border", "4px solid #FFFFFF").style("color", "white")
-                .style("padding", "15px 35px").style("border-radius", "50px").style("font-weight", "900").style("font-size", "1.1rem")
-                .style("font-family", "'Quicksand', sans-serif").style("cursor", "pointer").style("box-shadow", "0 0 20px rgba(255, 64, 129, 0.6)")
-                .html("✨ Volver al Mundo ✨")
-                .on("click", function() {
-                    d3.select("#mapa-detalle").remove(); d3.select("#titulo-pais-explora").remove();
-                    d3.select(this).remove(); d3.select("#tooltip").classed("tooltip-visible", false).classed("tooltip-oculto", true);
-                    d3.select("#mapa-svg").style("display", "block");
-                });
-        }
-
-        function renderizarPantallaSonados() {
-            const contenedor = document.getElementById('vista-por-vivir');
-            const idsPaises = Object.keys(destinosSonados);
-
-            contenedor.innerHTML = `
-                <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2><i data-lucide="heart"></i> Destinos por Vivir</h2>
-                    <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoDestino()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);">
-                        <i data-lucide="plus-circle"></i> Nueva Aventura
-                    </button>
-                </div>
-                <div id="selector-nuevo-destino" style="display:none; background: #FFF8F1; margin: 15px; padding: 20px; border-radius: 15px; border: 2px dashed var(--primary); animation: fadeIn 0.3s ease;">
-                    <h3 style="margin-top:0; color: var(--primary);">¿A dónde quieres ir?</h3>
-                    <p style="font-size: 0.9rem; color: #607D8B;">Selecciona tu destino final para empezar a planear:</p>
-                    <select id="select-pais-nuevo" onchange="cargarCiudadesAventura()" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 10px; font-family: inherit; font-size: 1rem; background: white;">
-                    <option value="" disabled selected>Elige un país...</option>
-                </select>
-
-                <select id="select-ciudad-aventura" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
-                    <option value="" disabled selected>Elige una ciudad...</option>
-                </select>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="confirmarNuevoDestino()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Crear Aventura</button>
-                        <button onclick="document.getElementById('selector-nuevo-destino').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
-                    </div>
-                </div>
-                <div class="contenedor-scroll" id="scroll-sonados"></div>
-            `;
-
-            const scrollArea = document.getElementById('scroll-sonados');
-
-            setTimeout(() => {
-                const select = document.getElementById('select-pais-nuevo');
-                if (select) {
-                    const paisesMapa = d3.selectAll('.pais').data();
-                    if (paisesMapa && paisesMapa.length > 0) {
-                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
-                        const listaOrdenada = paisesMapa
-                            .map(d => ({ id: d.id, nombre: d.properties.name }))
-                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-                        listaOrdenada.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.nombre;
-                            select.appendChild(opt);
-                        });
-                    }
-                }
-            }, 100);
-
-            if (idsPaises.length === 0) {
-                scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="compass"></i><p>No tienes aventuras planeadas todavía.</p></div>`;
-            } else {
-                const listaHTML = document.createElement('div');
-                listaHTML.className = 'lista-paises';
-                idsPaises.forEach(id => {
-                    const pais = destinosSonados[id];
-                    const numItems = pais.itinerario.length;
-                    const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
-                    listaHTML.innerHTML += `
-                        <div class="tarjeta-pais">
-                            <div class="info-pais">
-                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
-                                <div><h3 class="nombre-pais-lista">${nombrePrincipal}</h3><span class="zonas-badge">${numItems} pasos</span></div>
-                            </div>
-                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
-                        </div>`;
-                });
-                scrollArea.appendChild(listaHTML);
-            }
-            lucide.createIcons();
-        }
-
-        window.renderizarPantallaRecuerdos = function() {
-            const contenedor = document.getElementById('vista-vividas');
-            const idsPaises = Object.keys(paisesVisitados);
-            
-            contenedor.innerHTML = `
-                <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2><i data-lucide="camera"></i> Galería de Recuerdos</h2>
-                    <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoRecuerdo()" style="background: var(--secondary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0, 188, 212, 0.3);">
-                        <i data-lucide="plus-circle"></i> Nuevo Recuerdo
-                    </button>
-                </div>
-                
-                <div id="selector-nuevo-recuerdo" style="display:none; background: #FDF2F5; margin: 15px; padding: 20px; border-radius: 15px; border: 2px dashed var(--primary); animation: fadeIn 0.3s ease;">
-                <h3 style="margin-top:0; color: var(--primary);">¿Donde estuvimos?</h3>
-                <p style="font-size: 0.9rem; color: #607D8B;">Elegí país</p>
-                
-                <select id="select-pais-recuerdo" onchange="cargarCiudadesRecuerdo()" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
-                    <option value="" disabled selected>Elegí un país...</option>
-                </select>
-
-                <div id="contenedor-ciudad-recuerdo" style="display:none; margin-bottom: 15px;">
-                    <select id="select-ciudad-recuerdo" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; font-family: inherit; font-size: 1rem; background: white;">
-                        <option value="" disabled selected>¿Qué ciudad, bebé?</option>
-                    </select>
-                </div>
-
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="confirmarNuevoRecuerdo()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Guardar Recuerdo</button>
-                    <button onclick="document.getElementById('selector-nuevo-recuerdo').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
-                </div>
+      <section class="result-grid">
+        <article class="card-stage">
+          <div id="cardMount" class="empty-state">
+            <div>
+              <i data-lucide="image-plus"></i>
+              <p>Aquí aparecerá la carta ilustrada cuando invoques una historia.</p>
             </div>
+          </div>
+          <div class="gallery-panel" style="width:100%;">
+            <strong>Cartas recientes</strong>
+            <div id="galleryList" class="gallery-list"></div>
+          </div>
+        </article>
 
-                <div class="contenedor-scroll" id="scroll-recuerdos"></div>
-            `;
+        <article class="story-panel">
+          <div class="story-box">
+            <strong>Interpretación de la IA fantástica</strong>
+            <div id="storySummary">La carta aún no ha sido creada.</div>
+          </div>
+          <div class="prompt-box">
+            <strong>Prompt visual construido</strong>
+            <div id="promptSummary">Selecciona una categoría, un estilo y escribe una historia para generar la imagen tipo carta.</div>
+          </div>
+          <div>
+            <strong style="display:block; margin-bottom:8px; color:var(--gold-soft); font-family:'Cinzel', serif;">Etiquetas del relato</strong>
+            <div id="tagContainer" class="tags"></div>
+          </div>
+          <div class="story-box" style="min-height: 180px;">
+            <strong>Cómo funciona</strong>
+            <div>La página detecta el tipo de historia, la mezcla con una familia fantástica y genera una carta visual medieval directamente en pantalla para que el personaje, la reliquia o el mundo aparezcan como una pieza coleccionable.</div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
 
-            const scrollArea = document.getElementById('scroll-recuerdos');
+  <script>
+    const topicOptions = [
+      { id: 'ser', title: 'Ser o Entidad', description: 'Personajes, personas, criaturas o presencias.' },
+      { id: 'leyenda', title: 'Leyenda', description: 'Eventos míticos, gestas y relatos ancestrales.' },
+      { id: 'reliquia', title: 'Reliquias', description: 'Objetos mágicos, tesoros y artefactos.' },
+      { id: 'mundo', title: 'Mundos', description: 'Reinos, dimensiones, ciudades y planos.' }
+    ];
 
-            // Cargar lista de países en el selector
-            setTimeout(() => {
-                const select = document.getElementById('select-pais-recuerdo');
-                if (select) {
-                    const paisesMapa = d3.selectAll('.pais').data();
-                    if (paisesMapa && paisesMapa.length > 0) {
-                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
-                        const listaOrdenada = paisesMapa
-                            .map(d => ({ id: d.id, nombre: d.properties.name }))
-                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const toneOptions = [
+      { id: 'monstruo', title: 'Monstruo', description: 'Vampiros, brujas, hombres lobo, quimeras y horrores.' },
+      { id: 'leyendas', title: 'Leyendas', description: 'Dioses, titanes, héroes míticos y seres legendarios.' },
+      { id: 'lugubres', title: 'Lúgubres', description: 'Demonios, espíritus, fantasmas, ángeles caídos y sombras.' },
+      { id: 'humanos', title: 'Humanos', description: 'Profesiones, arquetipos y rasgos de personalidad.' }
+    ];
 
-                        listaOrdenada.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.nombre;
-                            select.appendChild(opt);
-                        });
-                    }
-                }
-            }, 100);
+    const toneFamilies = {
+      monstruo: ['vampiro de mármol', 'bruja del pantano', 'hombre lobo imperial', 'frankenstein ceremonial', 'quimera de hierro'],
+      leyendas: ['diosa solar', 'titán de tormentas', 'oráculo dracónico', 'guardián mitológico', 'rey legendario del eclipse'],
+      lugubres: ['demonio coronado', 'espíritu de neblina', 'fantasma enlutado', 'ángel caído', 'señor espectral'],
+      humanos: ['alquimista elegante', 'doctor de plagas', 'noble vanidoso', 'científica arcana', 'capitana mercenaria']
+    };
 
-            if (idsPaises.length === 0) {
-                scrollArea.innerHTML = `<div class="mensaje-vacio"><i data-lucide="map"></i><p>Aún no has marcado países visitados.</p></div>`;
-            } else {
-                const listaHTML = document.createElement('div');
-                listaHTML.className = 'lista-paises';
-                idsPaises.forEach(id => {
-                    const pais = paisesVisitados[id];
-                    const numAlbumes = (pais.albumes ? pais.albumes.length : 0) + (pais.historias ? pais.historias.length : 0);
-                    listaHTML.innerHTML += `
-                        <div class="tarjeta-pais">
-                            <div class="info-pais">
-                                <div class="icono-bandera"><i data-lucide="map-pin"></i></div>
-                                <div><h3 class="nombre-pais-lista">${pais.nombre}</h3><span class="zonas-badge">${numAlbumes} memorias</span></div>
-                            </div>
-                            <button class="btn-accion-pais" onclick="abrirAlbum('${id}')">Ver Álbumes <i data-lucide="chevron-right"></i></button>
-                        </div>`;
-                });
-                scrollArea.appendChild(listaHTML);
-            }
-            lucide.createIcons();
-        }
+    const moods = [
+      { keywords: ['cruel', 'fea', 'odio', 'malvada', 'traición', 'toxico', 'tóxico', 'infiel', 'oscura', 'manipul'], aura: 'siniestro', accent: '#7a1010', reading: 'La historia pide una forma demoníaca y feroz.' },
+      { keywords: ['amor', 'hermosa', 'luz', 'admir', 'bondad', 'noble', 'amable', 'salvó', 'milagro'], aura: 'sagrado', accent: '#af8b2b', reading: 'La historia emana un brillo heroico o divino.' },
+      { keywords: ['misterio', 'secreto', 'niebla', 'noche', 'perdido', 'silencio', 'sombras'], aura: 'místico', accent: '#4a3f74', reading: 'La historia se transforma en un enigma medieval.' },
+      { keywords: ['fuego', 'guerra', 'batalla', 'rompió', 'furia', 'poder', 'destruyó'], aura: 'bélico', accent: '#9c3f19', reading: 'La carta exige una presencia agresiva y monumental.' }
+    ];
 
-        window.mostrarSelectorNuevoRecuerdo = function() {
-            document.getElementById('selector-nuevo-recuerdo').style.display = 'block';
-        };
+    const appState = {
+      topic: topicOptions[0].id,
+      tone: toneOptions[0].id,
+      gallery: []
+    };
 
-        window.cargarCiudadesRecuerdo = function() {
-            const selectPais = document.getElementById('select-pais-recuerdo');
-            const idPais = selectPais.value;
-            const nombrePais = selectPais.options[selectPais.selectedIndex].text;
-            const contenedor = document.getElementById('contenedor-ciudad-recuerdo');
-            const selectCiudad = document.getElementById('select-ciudad-recuerdo');
+    const topicSelector = document.getElementById('topicSelector');
+    const toneSelector = document.getElementById('toneSelector');
+    const cardMount = document.getElementById('cardMount');
+    const promptSummary = document.getElementById('promptSummary');
+    const storySummary = document.getElementById('storySummary');
+    const tagContainer = document.getElementById('tagContainer');
+    const galleryList = document.getElementById('galleryList');
+    const activeTopicLabel = document.getElementById('activeTopicLabel');
+    const activeToneLabel = document.getElementById('activeToneLabel');
+    const activeReading = document.getElementById('activeReading');
+    const generateButton = document.getElementById('generateButton');
 
-            if (!idPais) return;
+    function renderChoices(container, options, selectedId, onSelect) {
+      container.innerHTML = options.map(option => `
+        <button class="choice ${option.id === selectedId ? 'active' : ''}" type="button" data-id="${option.id}">
+          <strong>${option.title}</strong>
+          <span>${option.description}</span>
+        </button>
+      `).join('');
 
-            contenedor.style.display = 'block';
-            selectCiudad.innerHTML = '<option value="" disabled selected>Buscando Ciudades...</option>';
-
-            d3.json("mapas/estados_provincias.json").then(function(data) {
-                const ciudades = data.features.filter(p => p.properties.admin === nombrePais);
-                selectCiudad.innerHTML = '<option value="" disabled selected>¿Ciudad?</option>';
-                
-                ciudades.sort((a,b) => (a.properties.name || "").localeCompare(b.properties.name || "")).forEach(prov => {
-                    const nombre = prov.properties.name || "Provincia";
-                    const idProv = prov.id || (prov.properties.name).replace(/\s+/g,'_');
-                    selectCiudad.innerHTML += `<option value="${idProv}">${nombre}</option>`;
-                });
-            });
-        };
-
-        window.confirmarNuevoRecuerdo = function() {
-            const selectPais = document.getElementById('select-pais-recuerdo');
-            const selectCiu = document.getElementById('select-ciudad-recuerdo');
-            const idPais = selectPais.value;
-            const nombrePais = selectPais.options[selectPais.selectedIndex]?.text;
-            const idProv = selectCiu.value;
-            const nombreProv = selectCiu.options[selectCiu.selectedIndex]?.text;
-
-            if (idPais && idProv) {
-                // 1. Guardar y pintar País
-                if (!paisesVisitados[idPais]) {
-                    paisesVisitados[idPais] = { nombre: nombrePais, albumes: [], historias: [], musica: null };
-                }
-                d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
-
-                // 2. Guardar y pintar Ciudad
-                if (!provinciasVisitadas[idPais]) provinciasVisitadas[idPais] = {};
-                if (!provinciasVisitadas[idPais][idProv]) {
-                    provinciasVisitadas[idPais][idProv] = { nombre: nombreProv, albumes: [], historias: [] };
-                }
-                
-                // Forzar el pintado de la ciudad (por si el mapa detallado está cargado)
-                try {
-                    d3.select(`#${CSS.escape(idProv)}`).classed('visitada', true);
-                } catch(e) {}
-
-                renderizarPantallaRecuerdos();
-                document.getElementById('selector-nuevo-recuerdo').style.display = 'none';
-                alert("Ubicación marcada como visitada.");
-            } else {
-                alert("Por favor, selecciona país y ciudad.");
-            }
-        };
-        
-        window.abrirAlbum = function(idPais, idProvincia = null) {
-            const pais = paisesVisitados[idPais];
-            const scrollArea = document.getElementById('scroll-recuerdos');
-            
-            // Si NO hay provincia seleccionada, siempre mostramos el menú de provincias (eliminamos el acceso general)
-            if (!idProvincia) {
-                const provs = provinciasVisitadas[idPais] || {};
-                const idsProvincias = Object.keys(provs);
-
-                scrollArea.innerHTML = `
-                    <div class="cabecera-detalle" style="justify-content: flex-start; gap: 15px; margin-bottom: 20px;">
-                        <button class="btn-volver" onclick="renderizarPantallaRecuerdos()" title="Volver"><i data-lucide="arrow-left"></i></button>
-                        <h2 style="margin:0;"><i data-lucide="map"></i> Destinos en ${pais.nombre}</h2>
-                    </div>
-                    
-                    <div style="background: #E1F5FE; padding: 15px; border-radius: 12px; margin-bottom: 20px; color: #0288D1; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
-                        <span style="font-weight: bold; flex: 1;">Selecciona la ciudad/provincia para ver o añadir sus recuerdos:</span>
-                        <button onclick="mostrarSelectorNuevaCiudad('${idPais}')" style="background: var(--secondary); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                            <i data-lucide="plus-circle" style="width: 18px;"></i> Agregar ciudad
-                        </button>
-                    </div>
-                    
-                    <div class="galeria-grid">
-                        ${idsProvincias.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #90A4AE; padding: 30px; font-style: italic; background: white; border-radius: 12px; border: 1px dashed #CFD8DC;">Aún no has agregado ninguna ciudad a este país. Toca "Agregar ciudad" para empezar.</div>' : ''}
-                        ${idsProvincias.map(pid => `
-                            <div class="tarjeta-agregar" style="height: auto; padding: 20px; border: 3px solid var(--secondary); background: #F0FBFF; cursor: pointer;" onclick="window.abrirAlbumDetalle('${idPais}', '${pid}')">
-                                <i data-lucide="map-pin" style="width: 40px; height: 40px; color: var(--secondary);"></i>
-                                <span style="color: var(--secondary); margin-top: 10px; text-align: center; font-weight: bold;">${provs[pid].nombre}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                lucide.createIcons();
-                return;
-            }
-
-            // Si ya se pasó una ciudad, vamos directo al detalle
-            window.abrirAlbumDetalle(idPais, idProvincia);
-        };
-
-        window.mostrarSelectorNuevaCiudad = function(idPais) {
-            const pais = paisesVisitados[idPais];
-            const modal = document.createElement('div');
-            modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px;";
-            modal.innerHTML = `
-                <div style="background:white; padding: 25px; border-radius:15px; width:100%; max-width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-                    <h3 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="map-pin"></i> Nueva ciudad en ${pais.nombre}</h3>
-                    <p style="color: #546E7A; font-size: 0.95rem; margin-bottom: 15px;">
-                    <select id="select-nueva-ciudad" style="width: 100%; padding: 12px; border: 1px solid #CFD8DC; border-radius: 8px; font-family: inherit; margin-bottom: 20px; box-sizing: border-box; outline: none; font-size: 1rem;">
-                        <option value="" disabled selected>Cargando ciudades...</option>
-                    </select>
-                    <div style="display:flex; justify-content: flex-end; gap: 10px;">
-                        <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #ECEFF1; color: #546E7A; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold;">Cancelar</button>
-                        <button id="btn-guardar-ciudad" style="background: var(--secondary); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold;">Guardar Ciudad</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            lucide.createIcons();
-            
-            // Cargamos las provincias bien calientes desde nuestro archivo JSON
-            d3.json("mapas/estados_provincias.json").then(function(data){
-                const provincias = data.features.filter(p => p.properties.admin === pais.nombre);
-                const select = document.getElementById('select-nueva-ciudad');
-                select.innerHTML = '<option value="" disabled selected>Elegí un destino ...</option>';
-                
-                provincias.sort((a,b) => (a.properties.name || "").localeCompare(b.properties.name || "")).forEach(prov => {
-                    const nombre = prov.properties.name || prov.properties.name_en || "Provincia";
-                    const idProv = prov.id || (prov.properties.iso_3166_2 || prov.properties.name || prov.properties.name_en).replace(/\s+/g,'_');
-                    
-                    // Solo te muestro las que todavía no me hiciste conocer...
-                    if (!provinciasVisitadas[idPais] || !provinciasVisitadas[idPais][idProv]) {
-                        const opt = document.createElement('option');
-                        opt.value = idProv;
-                        opt.textContent = nombre;
-                        select.appendChild(opt);
-                    }
-                });
-                
-                if(select.options.length === 1) {
-                    select.innerHTML = '<option value="" disabled selected>Elige una ciudad</option>';
-                }
-            });
-            
-            // Función para clavar nuestra nueva conquista
-            document.getElementById('btn-guardar-ciudad').onclick = function() {
-                const select = document.getElementById('select-nueva-ciudad');
-                const idProvinciaGenerado = select.value;
-                const nombre = select.options[select.selectedIndex]?.text;
-                
-                if (idProvinciaGenerado) {
-                    if (!provinciasVisitadas[idPais]) provinciasVisitadas[idPais] = {};
-                    
-                    // Marcamos el país como visitado automáticamente
-                    if (!paisesVisitados[idPais]) {
-                        paisesVisitados[idPais] = {
-                            nombre: pais.nombre,
-                            albumes: [],
-                            historias: [],
-                            musica: null
-                        };
-                    }
-
-                    // Pintamos en rojo tanto el país como la ciudad en el mapa
-                    d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
-                    try {
-                        d3.select(`#${CSS.escape(idProvinciaGenerado)}`).classed('visitada', true);
-                    } catch(e) { console.log("No se pudo pintar la ciudad aún"); }
-                    
-                    modal.remove(); 
-                    window.abrirAlbum(idPais);
-                    
-                    // Aseguramos que el país quede marcado como totalmente nuestro
-                    if(!paisesVisitados[idPais]){
-                        paisesVisitados[idPais] = {
-                            nombre: pais.nombre,
-                            albumes: [],
-                            historias: [],
-                            musica: null
-                        };
-                    }
-
-                    // Le damos el colorcito de "visitado" al país entero en el mapa mundial
-                    d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
-                    
-                    // Intentamos pintar la provincia si tenemos el mapita detallado abierto en el fondo
-                    try {
-                        d3.select(`#${CSS.escape(idProvinciaGenerado)}`).classed('visitada', true);
-                    } catch(e) {}
-                    
-                    modal.remove(); 
-                    window.abrirAlbum(idPais); 
-                } else {
-                    alert("elegí una ciudad primero para que guardemos el recuerdo.");
-                }
-            };
-        };
-
-        window.abrirAlbumDetalle = function(idPais, idProvincia) {
-            const pais = paisesVisitados[idPais];
-            let objDestino = pais;
-            let nombreTitulo = pais.nombre;
-            
-            if (idProvincia) {
-                objDestino = provinciasVisitadas[idPais][idProvincia];
-                nombreTitulo = `${objDestino.nombre} (${pais.nombre})`;
-            }
-
-            if (!objDestino.albumes) objDestino.albumes = [];
-            if (!objDestino.historias) objDestino.historias = [];
-            
-            const scrollArea = document.getElementById('scroll-recuerdos');
-            const tieneMusica = !!objDestino.musica;
-            
-            // Lógica de navegación: si estamos dentro de una ciudad, "Volver" nos lleva a la lista de ciudades.
-            const btnVolverAccion = idProvincia ? `abrirAlbum('${idPais}')` : `renderizarPantallaRecuerdos()`;
-            const paramProv = idProvincia ? `'${idProvincia}'` : `null`;
-
-            scrollArea.innerHTML = `
-                <div class="cabecera-detalle" style="justify-content: flex-start; gap: 15px; margin-bottom: 5px;">
-                    <button class="btn-volver" onclick="${btnVolverAccion}" title="Volver"><i data-lucide="arrow-left"></i></button>
-                    <h2 style="margin:0;">Memorias de ${nombreTitulo}</h2>
-                </div>
-
-                <div id="seccion-musica" style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 5px solid #3b82f6;">
-                    <div id="vista-musica-guardada" style="display: ${tieneMusica ? 'flex' : 'none'}; align-items: center; justify-content: space-between; gap: 10px;">
-                        <a href="${objDestino.musica}" target="_blank" style="flex: 1; background: #3b82f6; color: white; text-decoration: none; padding: 12px; border-radius: 10px; font-weight: bold; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                            <i data-lucide="play-circle"></i> MÚSICA PARA LA MEMORIA
-                        </a>
-                        <button onclick="cambiarMusica('${idPais}', ${paramProv})" title="Cambiar enlace" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; padding: 12px; border-radius: 10px; cursor: pointer;">
-                            <i data-lucide="refresh-cw" style="width:18px;"></i>
-                        </button>
-                    </div>
-                    
-                    <div id="input-musica" style="display: ${tieneMusica ? 'none' : 'flex'}; gap: 10px; align-items: center;">
-                        <div style="flex:1; position:relative;">
-                            <i data-lucide="music" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; color:#94a3b8;"></i>
-                            <input type="text" id="url-musica" placeholder="Pega el link de la canción..." style="width:100%; padding:10px 10px 10px 35px; border-radius:8px; border:1px solid #cbd5e1; font-size: 0.85rem; outline: none;">
-                        </div>
-                        <button onclick="guardarMusica('${idPais}', ${paramProv})" style="background: #3b82f6; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">Guardar</button>
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; background: #f1f5f9; padding: 5px; border-radius: 12px;">
-                    <button id="tab-drive" onclick="cambiarSeccionRecuerdos('drive', '${idPais}', ${paramProv})" style="flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background: var(--secondary); color:white;">
-                        <i data-lucide="folder" style="width:16px; vertical-align:middle;"></i> Drive
-                    </button>
-                    <button id="tab-historias" onclick="cambiarSeccionRecuerdos('historias', '${idPais}', ${paramProv})" style="flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:transparent; color:#546E7A;">
-                        <i data-lucide="book-open" style="width:16px; vertical-align:middle;"></i> Historias
-                    </button>
-                </div>
-
-                <div id="form-drive" style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E1F5FE;">
-                    <h4 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle"></i> Agregar Nueva Carpeta</h4>
-                    <div style="display:flex; flex-direction: column; gap:10px;">
-                        <input type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Fotos del Hotel)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                        <div style="display:flex; gap:10px;">
-                            <input type="text" id="url-carpeta-drive" placeholder="Link de Drive..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                            <button onclick="agregarCarpetaDrive('${idPais}', ${paramProv})" style="background: var(--secondary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold;"><i data-lucide="save"></i></button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="form-historias" style="display:none; background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #FCE4EC;">
-                    <h4 style="margin-top:0; color: var(--primary); display:flex; align-items:center; gap:8px;"><i data-lucide="pen-tool"></i> Escribir una Anécdota</h4>
-                    <div style="display:flex; flex-direction: column; gap:10px;">
-                        <input type="text" id="titulo-historia" placeholder="Título de la historia..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                        <input type="text" id="img-historia" placeholder="URL de la imagen de portada..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                        <textarea id="texto-historia" placeholder="Cuéntame qué pasó en este viaje..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
-                        <button onclick="agregarHistoria('${idPais}', ${paramProv})" style="background: var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold; align-self: flex-end;">Guardar Historia</button>
-                    </div>
-                </div>
-
-                <div id="lista-memorias-guardadas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
-                </div>
-            `;
-
-            actualizarVistaAlbumes(idPais, idProvincia);
-            lucide.createIcons();
-        };
-
-        window.extraerIDYoutube = function(url) {
-            const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[7].length === 11) ? match[7] : null;
-        };
-
-        window.guardarMusica = function(idPais, idProvincia = null) {
-            const urlInput = document.getElementById('url-musica');
-            const url = urlInput.value.trim();
-            if (!url) return;
-            if (!url.includes('youtube.com') && !url.includes('youtu.be')) { alert("Por favor, ingresa un enlace válido de YouTube."); return; }
-            
-            let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            objDestino.musica = url;
-            window.abrirAlbumDetalle(idPais, idProvincia); 
-        };
-
-        window.cambiarMusica = function(idPais, idProvincia = null) {
-            let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            objDestino.musica = null;
-            window.abrirAlbumDetalle(idPais, idProvincia);
-        };
-
-        window.cambiarSeccionRecuerdos = function(tipo, idPais, idProvincia = null) {
-            const btnDrive = document.getElementById('tab-drive');
-            const btnHistorias = document.getElementById('tab-historias');
-            const formDrive = document.getElementById('form-drive');
-            const formHistorias = document.getElementById('form-historias');
-
-            if (tipo === 'drive') {
-                btnDrive.style.background = 'var(--secondary)'; btnDrive.style.color = 'white';
-                btnHistorias.style.background = 'transparent'; btnHistorias.style.color = '#546E7A';
-                formDrive.style.display = 'block'; formHistorias.style.display = 'none';
-            } else {
-                btnHistorias.style.background = 'var(--primary)'; btnHistorias.style.color = 'white';
-                btnDrive.style.background = 'transparent'; btnDrive.style.color = '#546E7A';
-                formDrive.style.display = 'none'; formHistorias.style.display = 'block';
-            }
-            actualizarVistaAlbumes(idPais, idProvincia, tipo);
-        };
-
-        window.actualizarVistaAlbumes = function(idPais, idProvincia = null, vista = 'drive') {
-            const contenedor = document.getElementById('lista-memorias-guardadas');
-            let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            contenedor.innerHTML = '';
-
-            const paramProv = idProvincia ? `'${idProvincia}'` : `null`;
-
-            if (vista === 'drive') {
-                const albumes = objDestino.albumes || [];
-                if (albumes.length === 0) {
-                    contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="folder-x" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>No hay carpetas compartidas aún.</p></div>';
-                } else {
-                    albumes.forEach((album, index) => {
-                        contenedor.innerHTML += `
-                            <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 5px solid var(--secondary);">
-                                <div style="padding: 15px;">
-                                    <div style="display:flex; justify-content: space-between;">
-                                        <h3 style="margin:0; font-size: 1rem;">${album.nombre}</h3>
-                                        <button onclick="eliminarMemoria('${idPais}', ${paramProv}, ${index}, 'drive')" style="background:none; border:none; color: #EF5350; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
-                                    </div>
-                                    <a href="${album.url}" target="_blank" style="display:block; margin-top:15px; text-align:center; background:#DB4437; color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.8rem;">ABRIR DRIVE</a>
-                                </div>
-                            </div>`;
-                    });
-                }
-            } else {
-                const historias = objDestino.historias || [];
-                if (historias.length === 0) {
-                    contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="scroll" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>Aún no has escrito historias.</p></div>';
-                } else {
-                    historias.forEach((h, index) => {
-                        contenedor.innerHTML += `
-                            <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display:flex; flex-direction:column;">
-                                <div style="height:120px; background: #eee url('${h.img || 'https://via.placeholder.com/300x150?text=Sin+Imagen'}') center/cover no-repeat;"></div>
-                                <div style="padding: 15px;">
-                                    <div style="display:flex; justify-content: space-between; align-items:center;">
-                                        <h3 style="margin:0; font-size: 1rem; color: var(--primary);">${h.titulo}</h3>
-                                        <button onclick="eliminarMemoria('${idPais}', ${paramProv}, ${index}, 'historia')" style="background:none; border:none; color: #EF5350; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
-                                    </div>
-                                    <p style="font-size: 0.85rem; color: #546E7A; margin-top:10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${h.texto}</p>
-                                    <button onclick="leerHistoria('${idPais}', ${paramProv}, ${index})" style="width:100%; margin-top:10px; padding:8px; border-radius:8px; border:1px solid var(--primary); color:var(--primary); background:transparent; font-weight:bold; cursor:pointer;">Leer Completa</button>
-                                </div>
-                            </div>`;
-                    });
-                }
-            }
-            lucide.createIcons();
-        };
-
-        window.agregarHistoria = function(idPais, idProvincia = null) {
-            const titulo = document.getElementById('titulo-historia').value.trim();
-            const img = document.getElementById('img-historia').value.trim();
-            const texto = document.getElementById('texto-historia').value.trim();
-            if (!titulo || !texto) { alert("Tu historia necesita al menos un título y contenido."); return; }
-
-            let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            objDestino.historias.push({ titulo, img, texto, fecha: new Date().toLocaleDateString() });
-            cambiarSeccionRecuerdos('historias', idPais, idProvincia);
-        };
-
-        window.leerHistoria = function(idPais, idProvincia = null, index) {
-            let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            const h = objDestino.historias[index];
-            const modal = document.createElement('div');
-            modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px;";
-            modal.innerHTML = `
-                <div style="background:white; width:100%; max-width:600px; max-height:90vh; border-radius:20px; overflow-y:auto; position:relative; padding-bottom:30px;">
-                    <button onclick="this.parentElement.parentElement.remove()" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; font-weight:bold; z-index:10;">X</button>
-                    <div style="width:100%; height:250px; background:url('${h.img}') center/cover no-repeat;"></div>
-                    <div style="padding:30px;">
-                        <span style="color:var(--primary); font-weight:bold; font-size:0.8rem;">${h.fecha}</span>
-                        <h2 style="margin-top:5px; color: #263238;">${h.titulo}</h2>
-                        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
-                        <p style="white-space: pre-wrap; line-height:1.6; color:#455A64;">${h.texto}</p>
-                    </div>
-                </div>`;
-            document.body.appendChild(modal);
-        };
-
-        window.eliminarMemoria = function(idPais, idProvincia = null, index, tipo) {
-            if (confirm("¿Seguro que quieres borrar esto?")) {
-                let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-                if (tipo === 'drive') {
-                    objDestino.albumes.splice(index, 1);
-                    actualizarVistaAlbumes(idPais, idProvincia, 'drive');
-                } else {
-                    objDestino.historias.splice(index, 1);
-                    actualizarVistaAlbumes(idPais, idProvincia, 'historias');
-                }
-            }
-        };
-
-        window.agregarCarpetaDrive = function(idPais, idProvincia = null) {
-            const nombre = document.getElementById('nombre-carpeta-drive').value.trim();
-            const url = document.getElementById('url-carpeta-drive').value.trim();
-            if (!nombre || !url) { alert("Faltan datos."); return; }
-            if (!url.includes('drive.google.com')) { alert("Link no válido."); return; }
-            
-            let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            objDestino.albumes.push({ nombre, url });
-            actualizarVistaAlbumes(idPais, idProvincia, 'drive');
-        };
-
-        // Redirigimos la función huérfana para evitar errores con código viejo que tenías debajo
-        window.abrirAlbumProvincia = function(countryId, provId) {
-            window.abrirAlbumDetalle(countryId, provId);
-        };
-        // Función para borrar todo el país de la galería y del mapa
-        window.borrarRecuerdoCompleto = function(idPais) {
-            const confirmacion = confirm(`¿Estás seguro de que quieres borrar todos los recuerdos de ${paisesVisitados[idPais].nombre}? Esto eliminará el país del mapa y borrará todas tus historias y álbumes.`);
-            
-            if (confirmacion) {
-                // Eliminar del objeto de estado
-                delete paisesVisitados[idPais];
-                
-                // Actualizar el mapa visualmente (quitar clase CSS)
-                d3.select(`.pais[id="${idPais}"]`).classed('visitado', false);
-                
-                // Volver a la lista general
-                renderizarPantallaRecuerdos();
-            }
-        };
-        
-       function renderizarPantallaSonados() {
-            const contenedor = document.getElementById('vista-por-vivir');
-            const idsPaises = Object.keys(destinosSonados);
-
-            contenedor.innerHTML = `
-                <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2><i data-lucide="heart"></i> Destinos por Vivir</h2>
-                    <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoDestino()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);">
-                        <i data-lucide="plus-circle"></i> Nueva Aventura
-                    </button>
-                </div>
-                <div id="selector-nuevo-destino" style="display:none; background: #FFF8F1; margin: 15px; padding: 20px; border-radius: 15px; border: 2px dashed var(--primary); animation: fadeIn 0.3s ease;">
-                    <h3 style="margin-top:0; color: var(--primary);">¿A dónde quieres ir?</h3>
-                    <p style="font-size: 0.9rem; color: #607D8B;">Selecciona tu destino final para empezar a planear:</p>
-                    <select id="select-pais-nuevo" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CFD8DC; margin-bottom: 15px; font-family: inherit; font-size: 1rem; background: white;">
-                        <option value="" disabled selected>Cargando países...</option>
-                    </select>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="confirmarNuevoDestino()" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer;">Crear Aventura</button>
-                        <button onclick="document.getElementById('selector-nuevo-destino').style.display='none'" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ECEFF1; color: #546E7A; font-weight: bold; cursor: pointer;">Cancelar</button>
-                    </div>
-                </div>
-                <div class="contenedor-scroll" id="scroll-sonados"></div>
-            `;
-
-            const scrollArea = document.getElementById('scroll-sonados');
-
-            // Cargar países dinámicamente desde los datos del mapa (D3)
-            setTimeout(() => {
-                const select = document.getElementById('select-pais-nuevo');
-                if (select) {
-                    const paisesMapa = d3.selectAll('.pais').data();
-                    
-                    if (paisesMapa && paisesMapa.length > 0) {
-                        select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
-                        const listaOrdenada = paisesMapa
-                            .map(d => ({ id: d.id, nombre: d.properties.name }))
-                            .sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-                        listaOrdenada.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.nombre;
-                            select.appendChild(opt);
-                        });
-                    } else {
-                        select.innerHTML = '<option value="" disabled selected>Error cargando mapa...</option>';
-                    }
-                }
-            }, 100);
-
-            if (idsPaises.length === 0) {
-                scrollArea.innerHTML = `
-                    <div class="mensaje-vacio">
-                        <i data-lucide="compass"></i>
-                        <p>No tienes aventuras planeadas todavía.</p>
-                        <p style="font-size: 1rem; font-weight: 500;">Haz clic en "Nueva Aventura" o elige un país en el mapa.</p>
-                    </div>
-                `;
-            } else {
-                const listaHTML = document.createElement('div');
-                listaHTML.className = 'lista-paises';
-
-                idsPaises.forEach(id => {
-    const pais = paisesVisitados[id];
-    const numAlbumes = (pais.albumes ? pais.albumes.length : 0) + (pais.historias ? pais.historias.length : 0);
-
-    let provinciasHTML = "";
-
-    if(provinciasVisitadas[id]){
-        const provs = Object.keys(provinciasVisitadas[id]);
-
-        provinciasHTML = `
-        <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
-            ${provs.map(pid=>{
-                const prov = provinciasVisitadas[id][pid];
-                return `<button onclick="abrirAlbumProvincia('${id}','${pid}')" 
-                style="background:none;border:none;color:#546E7A;font-weight:700;text-align:left;cursor:pointer;">
-                📍 ${prov.nombre || pid}
-                </button>`;
-            }).join("")}
-        </div>`;
+      container.querySelectorAll('.choice').forEach(button => {
+        button.addEventListener('click', () => onSelect(button.dataset.id));
+      });
     }
 
-    listaHTML.innerHTML += `
-        <div class="tarjeta-pais">
-            <div class="info-pais">
-                <div class="icono-bandera"><i data-lucide="map-pin"></i></div>
-                <div>
-                    <h3 class="nombre-pais-lista">${pais.nombre}</h3>
-                    <span class="zonas-badge">${numAlbumes} memorias</span>
-                    ${provinciasHTML}
-                </div>
+    function getSelectedMeta(type, id) {
+      const source = type === 'topic' ? topicOptions : toneOptions;
+      return source.find(item => item.id === id);
+    }
+
+    function detectMood(text) {
+      const lowered = text.toLowerCase();
+      for (const mood of moods) {
+        if (mood.keywords.some(keyword => lowered.includes(keyword))) return mood;
+      }
+      return { aura: 'ancestral', accent: '#6c5430', reading: 'La historia mantiene un equilibrio entre mito y memoria.' };
+    }
+
+    function buildFantasyProfile(topicId, toneId, story, name) {
+      const mood = detectMood(story);
+      const familyPool = toneFamilies[toneId];
+      let family = familyPool[Math.abs((story.length + name.length) % familyPool.length)];
+
+      if (toneId === 'lugubres' && /ex|exnovia|ex novia|ruptura|traici/i.test(story + ' ' + name)) {
+        family = 'demonio de promesas rotas';
+      }
+
+      const topicLabels = {
+        ser: 'ser transfigurado',
+        leyenda: 'leyenda encarnada',
+        reliquia: 'reliquia viviente',
+        mundo: 'mundo personificado'
+      };
+
+      const titlePrefix = {
+        ser: 'El',
+        leyenda: 'La',
+        reliquia: 'La',
+        mundo: 'El'
+      };
+
+      const cardTitle = `${titlePrefix[topicId]} ${family}`;
+      const summary = `${name || 'La figura invocada'} surge como ${topicLabels[topicId]} con forma de ${family}. La lectura dominante es ${mood.aura}, por lo que la carta exagera la historia y la convierte en una entidad de fantasía medieval.`;
+      const prompt = `Carta medieval fantástica, ${topicLabels[topicId]}, retrato de ${family}, atmósfera ${mood.aura}, dorados envejecidos, pergamino, heráldica, marco ornamentado, ilustración dramática inspirada en la historia: ${story}`;
+
+      const tags = [
+        getSelectedMeta('topic', topicId).title,
+        getSelectedMeta('tone', toneId).title,
+        family,
+        mood.aura
+      ];
+
+      return { mood, family, cardTitle, summary, prompt, tags };
+    }
+
+    function createSvgCard({ subject, topic, tone, profile }) {
+      const palette = {
+        monstruo: ['#2f1712', '#8f2f23', '#dfbc80'],
+        leyendas: ['#1d2743', '#4f75b5', '#f2d58d'],
+        lugubres: ['#1b1325', '#6f4ca5', '#e6d2ff'],
+        humanos: ['#2d2419', '#6d4f2f', '#f1dab1']
+      }[tone];
+
+      const icons = {
+        ser: '◈',
+        leyenda: '✦',
+        reliquia: '✧',
+        mundo: '⬢'
+      };
+
+      const auraWord = profile.mood.aura.toUpperCase();
+      const topicLabel = getSelectedMeta('topic', topic).title.toUpperCase();
+      const safeSubject = (subject || 'Figura Arcana').slice(0, 42);
+      const safeFamily = profile.family.toUpperCase().slice(0, 42);
+      const safeSnippet = profile.summary.slice(0, 130);
+      const accent = profile.mood.accent;
+
+      return `
+        <svg viewBox="0 0 720 960" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Carta fantástica de ${safeSubject}">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${palette[2]}"/>
+              <stop offset="60%" stop-color="#f4e6c0"/>
+              <stop offset="100%" stop-color="#d7b26e"/>
+            </linearGradient>
+            <linearGradient id="art" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="${palette[0]}"/>
+              <stop offset="100%" stop-color="${palette[1]}"/>
+            </linearGradient>
+            <radialGradient id="glow" cx="50%" cy="38%" r="60%">
+              <stop offset="0%" stop-color="${accent}" stop-opacity="0.95"/>
+              <stop offset="100%" stop-color="${palette[0]}" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="720" height="960" rx="44" fill="url(#bg)" stroke="#5b3916" stroke-width="18"/>
+          <rect x="32" y="32" width="656" height="896" rx="30" fill="none" stroke="#8c6731" stroke-width="5" stroke-dasharray="10 12"/>
+          <text x="60" y="86" font-size="28" fill="#4b3116" font-family="Cinzel, serif">${topicLabel}</text>
+          <text x="660" y="86" font-size="44" text-anchor="end" fill="#4b3116" font-family="Cinzel, serif">${icons[topic]}</text>
+          <text x="360" y="138" text-anchor="middle" font-size="44" fill="#2c1d0f" font-family="Cinzel, serif" font-weight="700">${safeSubject.toUpperCase()}</text>
+          <text x="360" y="182" text-anchor="middle" font-size="26" fill="#5b3916" font-family="Cinzel, serif">${safeFamily}</text>
+          <rect x="78" y="220" width="564" height="430" rx="30" fill="url(#art)" stroke="#5b3916" stroke-width="8"/>
+          <circle cx="360" cy="405" r="170" fill="url(#glow)"/>
+          <path d="M360 280 C325 315 300 360 300 415 C300 505 420 535 420 615" fill="none" stroke="#f2e4bf" stroke-width="16" stroke-linecap="round" opacity="0.8"/>
+          <path d="M255 520 C285 450 330 418 360 410 C392 402 452 425 500 515" fill="none" stroke="#f2d58d" stroke-width="14" stroke-linecap="round" opacity="0.75"/>
+          <circle cx="300" cy="360" r="16" fill="#f7e7be"/>
+          <circle cx="430" cy="340" r="12" fill="#f7e7be"/>
+          <circle cx="470" cy="470" r="18" fill="#f7e7be"/>
+          <path d="M220 620 Q360 550 500 620" fill="none" stroke="#2f1b12" stroke-width="8" opacity="0.4"/>
+          <rect x="94" y="690" width="532" height="160" rx="22" fill="#f4e6c5" stroke="#8c6731" stroke-width="4"/>
+          <text x="360" y="732" text-anchor="middle" font-size="24" fill="#5b3916" font-family="Cinzel, serif">AURA ${auraWord}</text>
+          <foreignObject x="122" y="752" width="476" height="82">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: 'Cormorant Garamond', serif; color: #2c1d0f; font-size: 28px; text-align: center; line-height: 1.05;">${safeSnippet}</div>
+          </foreignObject>
+          <text x="70" y="898" font-size="22" fill="#5b3916" font-family="Cinzel, serif">${getSelectedMeta('tone', tone).title.toUpperCase()}</text>
+          <text x="650" y="898" text-anchor="end" font-size="22" fill="#5b3916" font-family="Cinzel, serif">VII</text>
+        </svg>
+      `;
+    }
+
+    function mountCard(result) {
+      const topicLabel = getSelectedMeta('topic', result.topic).title;
+      const toneLabel = getSelectedMeta('tone', result.tone).title;
+      const cardHtml = `
+        <div class="fantasy-card">
+          <div class="card-shell">
+            <div class="card-topline">
+              <span>${topicLabel}</span>
+              <span>${toneLabel}</span>
             </div>
-            <button class="btn-accion-pais" onclick="abrirAlbum('${id}')">
-                Ver Álbumes <i data-lucide="chevron-right"></i>
-            </button>
-        </div>`;
-});
-                scrollArea.appendChild(listaHTML);
-            }
-            lucide.createIcons();
-        }
-        window.abrirAlbumProvincia = function(countryId, provId){
-    // Si no existe ese país en memoria, abortar
-    if(!provinciasVisitadas[countryId] || !provinciasVisitadas[countryId][provId]){
-        alert("No hay recuerdos para esta provincia.");
+            <div class="card-title">${result.subject || 'Figura Arcana'}</div>
+            <div class="card-art">${result.svg}</div>
+            <div class="card-footer">
+              <span>${result.profile.mood.aura}</span>
+              <span>Carta Invocada</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      cardMount.className = '';
+      cardMount.innerHTML = cardHtml;
+      lucide.createIcons();
+    }
+
+    function renderTags(tags) {
+      tagContainer.innerHTML = tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+    }
+
+    function renderGallery() {
+      if (!appState.gallery.length) {
+        galleryList.innerHTML = '<div class="memory-card"><p>Todavía no hay cartas guardadas en la mesa del escriba.</p></div>';
         return;
+      }
+
+      galleryList.innerHTML = appState.gallery.slice(0, 4).map(item => `
+        <article class="memory-card">
+          <h4>${item.subject || 'Figura Arcana'}</h4>
+          <p>${getSelectedMeta('topic', item.topic).title} · ${getSelectedMeta('tone', item.tone).title}</p>
+          <p>${item.profile.family}</p>
+        </article>
+      `).join('');
     }
 
-    const prov = provinciasVisitadas[countryId][provId];
+    function updateActiveLabels() {
+      activeTopicLabel.textContent = getSelectedMeta('topic', appState.topic).title;
+      activeToneLabel.textContent = getSelectedMeta('tone', appState.tone).title;
+    }
 
-    const scrollArea = document.getElementById('scroll-recuerdos');
+    function generateCard() {
+      const subject = document.getElementById('subjectName').value.trim();
+      const story = document.getElementById('storyInput').value.trim();
 
-    // Cabecera específica de provincia
-    scrollArea.innerHTML = `
-        <div class="cabecera-detalle" style="justify-content: flex-start; gap: 15px; margin-bottom: 5px;">
-            <button class="btn-volver" onclick="abrirAlbum('${countryId}')" title="Volver"><i data-lucide="arrow-left"></i></button>
-            <h2 style="margin:0;">Memorias de ${prov.nombre || provId} — ${ (paisesVisitados[countryId] && paisesVisitados[countryId].nombre) || '' }</h2>
-        </div>
+      if (!story) {
+        storySummary.textContent = 'Escribe una historia para que la carta pueda interpretarla.';
+        activeReading.textContent = 'Falta materia prima para la invocación.';
+        return;
+      }
 
-        <div class="contenedor-scroll" style="padding-top:10px;">
-            <div style="padding:20px; background:#fff; border-radius:12px;">
-                <p style="color:#546E7A; font-weight:700;">Aquí se mostrarán álbumes e historias guardadas para esta provincia.</p>
-            </div>
-        </div>
-    `;
+      const profile = buildFantasyProfile(appState.topic, appState.tone, story, subject);
+      const svg = createSvgCard({ subject, topic: appState.topic, tone: appState.tone, profile });
+      const result = { subject, story, topic: appState.topic, tone: appState.tone, profile, svg };
+
+      mountCard(result);
+      storySummary.textContent = profile.summary;
+      promptSummary.textContent = profile.prompt;
+      activeReading.textContent = profile.mood.reading;
+      renderTags(profile.tags);
+
+      appState.gallery.unshift(result);
+      appState.gallery = appState.gallery.slice(0, 4);
+      renderGallery();
+    }
+
+    // Re-bind selectors after each click so the active medieval seals remain in sync.
+    function bindTopicChoices() {
+      renderChoices(topicSelector, topicOptions, appState.topic, (id) => {
+        appState.topic = id;
+        bindTopicChoices();
+        updateActiveLabels();
+      });
+    }
+
+    function bindToneChoices() {
+      renderChoices(toneSelector, toneOptions, appState.tone, (id) => {
+        appState.tone = id;
+        bindToneChoices();
+        updateActiveLabels();
+      });
+    }
+
+    bindTopicChoices();
+    bindToneChoices();
+    updateActiveLabels();
+    renderGallery();
+
+    generateButton.addEventListener('click', generateCard);
+    document.getElementById('storyInput').addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') generateCard();
+    });
+
     lucide.createIcons();
-};
-
-        window.mostrarSelectorNuevoDestino = function() {
-            const el = document.getElementById('selector-nuevo-destino');
-            el.style.display = 'block';
-            el.scrollIntoView({ behavior: 'smooth' });
-        };
-
-        window.confirmarNuevoDestino = function() {
-            const select = document.getElementById('select-pais-nuevo');
-            const id = select.value;
-            const nombre = select.options[select.selectedIndex].text;
-
-            if (!id || id === "") return;
-
-            // Ocultar el panel de selección para que no estorbe
-            document.getElementById('selector-nuevo-destino').style.display = 'none';
-
-            if (!destinosSonados[id]) {
-                destinosSonados[id] = {
-                    nombre: nombre,
-                    destinoFinal: nombre,
-                    escalas: [],
-                    itinerario: []
-                };
-                
-                // Pintar el mapa
-                d3.select(`.pais[id="${id}"]`).classed('sonado', true);
-            }
-
-            abrirPlanificador(id);
-        };
-
-        window.abrirPlanificador = function(idPais) {
-            const pais = destinosSonados[idPais];
-            const scrollArea = document.getElementById('scroll-sonados');
-            
-            const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
-
-            let nombreVisual = `<span style="color: #FF4081;">${nombrePrincipal}</span>`;
-            if (pais.escalas && pais.escalas.length > 0) {
-                nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${pais.escalas.join(' - ').toUpperCase()})</span>`;
-            }
-
-            scrollArea.innerHTML = `
-                <div class="cabecera-detalle">
-                    <div style="display: flex; align-items: center; gap: 20px;">
-                        <button class="btn-volver" onclick="renderizarPantallaSonados()" title="Volver a la lista">
-                            <i data-lucide="arrow-left"></i>
-                        </button>
-                        <h2 style="font-size: 1.6rem; margin:0;">ITINERARIO: ${nombreVisual} 🌍</h2>
-                    </div>
-                    
-                    <button id="btn-borrar-iti" class="btn-borrar-itinerario" onclick="borrarItinerarioCompleto('${idPais}')" data-confirm="false" title="Eliminar todo el itinerario de este país">
-                        <i data-lucide="trash-2"></i> Borrar Todo
-                    </button>
-                </div>
-                
-                <div class="panel-creacion">
-                    <h3 style="margin-top:0; color: #455A64;">Agregar nuevo paso:</h3>
-                    <div class="botones-tipos">
-                        <button class="btn-tipo-item" onclick="mostrarFormularioItinerario('viaje', this)"><i data-lucide="bus"></i> Viaje</button>
-                        <button class="btn-tipo-item" onclick="manual_Hospedaje(this)"><i data-lucide="hotel"></i> Hospedaje</button>
-                        <button class="btn-tipo-item" onclick="manual_Aventura(this)"><i data-lucide="mountain"></i> Aventura</button>
-                        <button class="btn-tipo-item" onclick="manual_Restaurante(this)"><i data-lucide="utensils"></i> Restaurante</button>
-                    </div>
-                    <div id="contenedor-formularios"></div>
-                </div>
-
-                <div class="linea-tiempo" id="linea-tiempo-${idPais}"></div>
-            `;
-            
-            lucide.createIcons();
-            dibujarItinerario(idPais);
-        };
-
-        window.manual_Hospedaje = (btn) => mostrarFormularioItinerario('hospedaje', btn);
-        window.manual_Aventura = (btn) => mostrarFormularioItinerario('aventura', btn);
-        window.manual_Restaurante = (btn) => mostrarFormularioItinerario('restaurante', btn);
-
-        window.borrarItinerarioCompleto = function(idPais) {
-            const btn = document.getElementById('btn-borrar-iti');
-            if (btn.dataset.confirm === 'true') {
-                delete destinosSonados[idPais];
-                d3.selectAll('.pais').classed('sonado', function(d) { return destinosSonados[d.id] ? true : false; });
-                renderizarPantallaSonados();
-            } else {
-                btn.dataset.confirm = 'true';
-                btn.innerHTML = '<i data-lucide="alert-triangle"></i> ¿Seguro?';
-                btn.style.background = '#F44336';
-                btn.style.color = 'white';
-                lucide.createIcons();
-                setTimeout(() => {
-                    if(document.getElementById('btn-borrar-iti')) {
-                        btn.dataset.confirm = 'false';
-                        btn.innerHTML = '<i data-lucide="trash-2"></i> Borrar Todo';
-                        btn.style.background = '#FFEBEE';
-                        btn.style.color = '#F44336';
-                        lucide.createIcons();
-                    }
-                }, 3000);
-            }
-        };
-
-        window.mostrarFormularioItinerario = function(tipo, btn) {
-            document.querySelectorAll('.btn-tipo-item').forEach(b => b.classList.remove('seleccionado'));
-            btn.classList.add('seleccionado');
-
-            const contenedor = document.getElementById('contenedor-formularios');
-            let formHTML = `<div class="formulario-itinerario activo" id="form-${tipo}">`;
-
-            if (tipo === 'viaje') {
-                const paisesMapa = d3.selectAll('.pais').data();
-                const paisesSelect = paisesMapa
-                    .map(d => d.properties.name)
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(name => `<option value="${name}">${name}</option>`)
-                    .join('');
-
-                formHTML += `
-                    <div class="campo-form"><label>Medio de transporte</label>
-                        <select id="input-viaje-medio"><option value="Micro">🚌 Micro / Autobús</option><option value="Auto">🚗 Auto / Alquiler</option><option value="Avión">✈️ Avión</option><option value="Tren">🚂 Tren</option></select>
-                    </div>
-                    <div class="campo-form"><label>País de Escala</label>
-                        <select id="input-viaje-destino"><option value="" disabled selected>Selecciona un país...</option>${paisesSelect}</select>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="campo-form" style="flex: 1;"><label>Horas</label><input type="number" id="input-viaje-horas" placeholder="0"></div>
-                        <div class="campo-form" style="flex: 1;"><label>Minutos</label><input type="number" id="input-viaje-minutos" placeholder="0"></div>
-                    </div>
-                    <div class="campo-form"><label>Costo Pasaje ($)</label><input type="number" id="input-viaje-costo" placeholder="Ej. 150000"></div>
-                `;
-            } else if (tipo === 'hospedaje') {
-                formHTML += `
-                    <div class="campo-form"><label>Nombre del Hotel</label><input type="text" id="input-hospedaje-nombre" placeholder="Ej. Hotel Copacabana"></div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="campo-form" style="flex: 1;"><label>Noches</label><input type="number" id="input-hospedaje-noches" placeholder="Ej. 5"></div>
-                        <div class="campo-form" style="flex: 1;"><label>Precio Total ($)</label><input type="number" id="input-hospedaje-costo" placeholder="Ej. 80000"></div>
-                    </div>
-                `;
-            } else if (tipo === 'aventura') {
-                formHTML += `
-                    <div class="campo-form"><label>Lugar a visitar</label><input type="text" id="input-aventura-lugar" placeholder="Ej. Cristo Redentor"></div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="campo-form" style="flex: 1;"><label>Día</label><input type="text" id="input-aventura-dia" placeholder="Ej. Día 2"></div>
-                        <div class="campo-form" style="flex: 1;"><label>Precio ($)</label><input type="number" id="input-aventura-costo" placeholder="0"></div>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="campo-form" style="flex: 1;"><label>Llegada</label><input type="time" id="input-aventura-llegada"></div>
-                        <div class="campo-form" style="flex: 1;"><label>Partida</label><input type="time" id="input-aventura-partida"></div>
-                    </div>
-                `;
-            } else if (tipo === 'restaurante') {
-                formHTML += `
-                    <div class="campo-form"><label>Plato o Lugar</label><input type="text" id="input-rest-plato" placeholder="Ej. Feijoada"></div>
-                    <div class="campo-form"><label>Precio estimado ($)</label><input type="number" id="input-rest-precio" placeholder="Ej. 25000"></div>
-                `;
-            }
-
-            const idPais = document.querySelector('.linea-tiempo').id.replace('linea-tiempo-', '');
-            formHTML += `<button class="btn-guardar-item" onclick="guardarItemItinerario('${idPais}', '${tipo}')">Añadir al Itinerario ✨</button></div>`;
-            contenedor.innerHTML = formHTML;
-        };
-
-        window.guardarItemItinerario = function(idPais, tipo) {
-            let nuevoItem = { tipo: tipo, id: Date.now() };
-            const dataPais = destinosSonados[idPais];
-            if (!dataPais.destinoFinal) dataPais.destinoFinal = dataPais.nombre;
-            if (!dataPais.escalas) dataPais.escalas = [];
-
-            if (tipo === 'viaje') {
-                nuevoItem.medio = document.getElementById('input-viaje-medio').value;
-                const escalaValor = document.getElementById('input-viaje-destino').value;
-                nuevoItem.destino = escalaValor;
-                nuevoItem.horas = document.getElementById('input-viaje-horas').value || '0';
-                nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
-                nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
-                const escN = escalaValor ? escalaValor.toUpperCase() : "";
-                if (escN && escN !== dataPais.destinoFinal.toUpperCase() && !dataPais.escalas.includes(escN)) {
-                    dataPais.escalas.push(escN);
-                }
-            } else if (tipo === 'hospedaje') {
-                nuevoItem.hotel = document.getElementById('input-hospedaje-nombre').value || 'Alojamiento';
-                nuevoItem.noches = document.getElementById('input-hospedaje-noches').value || '1';
-                nuevoItem.costo = document.getElementById('input-hospedaje-costo').value || '0';
-            } else if (tipo === 'aventura') {
-                nuevoItem.lugar = document.getElementById('input-aventura-lugar').value || 'Aventura';
-                nuevoItem.dia = document.getElementById('input-aventura-dia').value || 'Día 1';
-                nuevoItem.costo = document.getElementById('input-aventura-costo').value || '0';
-                nuevoItem.llegada = document.getElementById('input-aventura-llegada').value;
-                nuevoItem.partida = document.getElementById('input-aventura-partida').value;
-            } else if (tipo === 'restaurante') {
-                nuevoItem.plato = document.getElementById('input-rest-plato').value || 'Restaurante';
-                nuevoItem.precio = document.getElementById('input-rest-precio').value || '0';
-            }
-
-            destinosSonados[idPais].itinerario.push(nuevoItem);
-            document.getElementById('contenedor-formularios').innerHTML = '';
-            document.querySelectorAll('.btn-tipo-item').forEach(b => b.classList.remove('seleccionado'));
-            dibujarItinerario(idPais);
-        };
-
-        window.eliminarItemItinerario = function(idPais, idItem) {
-            destinosSonados[idPais].itinerario = destinosSonados[idPais].itinerario.filter(i => i.id !== idItem);
-            dibujarItinerario(idPais);
-        }
-
-        window.dibujarItinerario = function(idPais) {
-            const timeline = document.getElementById(`linea-tiempo-${idPais}`);
-            const items = destinosSonados[idPais].itinerario;
-            timeline.innerHTML = '';
-            if (items.length === 0) {
-                timeline.innerHTML = `<p style="color:#90A4AE; padding-left: 20px;">Itinerario vacío.</p>`;
-                return;
-            }
-            items.forEach(item => {
-                let icono = 'circle'; let titulo = ''; let detalles = '';
-                if (item.tipo === 'viaje') { icono = 'bus'; titulo = `Viaje en ${item.medio}`; detalles = `Escala: ${item.destino}<br>Costo: $${item.costo}`; }
-                else if (item.tipo === 'hospedaje') { icono = 'hotel'; titulo = item.hotel; detalles = `${item.noches} noches - Total: $${item.costo}`; }
-                else if (item.tipo === 'aventura') { icono = 'mountain'; titulo = item.lugar; detalles = `Día: ${item.dia} ($${item.costo})<br>${item.llegada || ''} - ${item.partida || ''}`; }
-                else if (item.tipo === 'restaurante') { icono = 'utensils'; titulo = item.plato; detalles = `Gasto: $${item.precio}`; }
-                timeline.innerHTML += `
-                    <div class="item-timeline ${item.tipo}"><div class="punto-timeline"></div>
-                        <div class="item-header"><h4 class="item-titulo"><i data-lucide="${icono}"></i> ${titulo}</h4>
-                        <button class="btn-eliminar-item" onclick="eliminarItemItinerario('${idPais}', ${item.id})"><i data-lucide="trash-2"></i></button></div>
-                        <div class="item-detalles">${detalles}</div>
-                    </div>`;
-            });
-            lucide.createIcons();
-        };
-        document.addEventListener("DOMContentLoaded", cargarMapa);
-    </script>
+  </script>
 </body>
 </html>
