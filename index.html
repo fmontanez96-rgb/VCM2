@@ -817,6 +817,7 @@
         function renderizarPantallaSonados(opciones = {}) {
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
+            const idPendiente = opciones.abrirPlanificadorId || aperturaPlanificadorPendiente;
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1612,18 +1613,38 @@
             };
         }
 
+        function capitalizarNombreVisual(texto = '') {
+            return (texto || '')
+                .trim()
+                .replace(/\s+/g, ' ')
+                .replace(/\(([^)]+)\)/g, (_, contenido) => `(${capitalizarNombreVisual(contenido)})`)
+                .split(/([\s\-/]+)/)
+                .map(parte => {
+                    if (!parte || /^[\s\-/]+$/.test(parte)) return parte;
+                    return parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase();
+                })
+                .join('');
+        }
+
         function construirEscalaNormalizada(escala = {}) {
-            const paisNormalizado = (escala.pais || escala.destino || '').toUpperCase();
-            const ciudadNormalizada = (escala.ciudad || '').toUpperCase();
+            const paisOriginal = (escala.paisLabel || escala.destinoLabel || escala.pais || escala.destino || '').trim();
+            const ciudadOriginal = (escala.ciudadLabel || escala.ciudad || '').trim();
+            const paisNormalizado = (escala.pais || escala.destino || paisOriginal).trim().toUpperCase();
+            const ciudadNormalizada = (escala.ciudad || ciudadOriginal).trim().toUpperCase();
             const paisId = escala.paisId || escala.destinoId || '';
             const resumen = ciudadNormalizada || paisNormalizado;
+            const paisLabel = capitalizarNombreVisual(paisOriginal || paisNormalizado);
+            const ciudadLabel = capitalizarNombreVisual(ciudadOriginal || ciudadNormalizada);
+            const label = ciudadLabel || paisLabel;
 
             return {
                 pais: paisNormalizado,
                 paisId,
                 ciudad: ciudadNormalizada,
                 resumen,
-                label: resumen,
+                label,
+                paisLabel,
+                ciudadLabel,
                 origen: escala.origen || 'itinerario'
             };
         }
@@ -1672,7 +1693,9 @@
                 ...dataPais.escalasDetalle[indiceExistente],
                 pais: escalaNormalizada.pais || dataPais.escalasDetalle[indiceExistente].pais,
                 paisId: escalaNormalizada.paisId || dataPais.escalasDetalle[indiceExistente].paisId,
-                ciudad: escalaNormalizada.ciudad || dataPais.escalasDetalle[indiceExistente].ciudad
+                ciudad: escalaNormalizada.ciudad || dataPais.escalasDetalle[indiceExistente].ciudad,
+                paisLabel: escalaNormalizada.paisLabel || dataPais.escalasDetalle[indiceExistente].paisLabel,
+                ciudadLabel: escalaNormalizada.ciudadLabel || dataPais.escalasDetalle[indiceExistente].ciudadLabel
             });
 
             dataPais.escalasDetalle[indiceExistente] = escalaActualizada;
@@ -1680,7 +1703,7 @@
         }
 
         function obtenerResumenEscala(escala) {
-            return construirEscalaNormalizada(escala).resumen;
+            return construirEscalaNormalizada(escala).label;
         }
 
         function asegurarEstructuraDestinoSonado(dataPais, idPais = '') {
@@ -1695,7 +1718,9 @@
                 .map(item => ({
                     pais: item.destino,
                     paisId: item.destinoId || '',
+                    paisLabel: item.destinoLabel || item.destino || '',
                     ciudad: item.ciudad || '',
+                    ciudadLabel: item.ciudadLabel || item.ciudad || '',
                     origen: 'itinerario'
                 }));
 
@@ -1740,12 +1765,11 @@
             (destino.escalasDetalle || []).forEach(escala => {
                 if (!escala) return;
 
-                const ciudadEscala = (escala.ciudad || '').toUpperCase().trim();
-                const paisEscala = (escala.pais || escala.destino || '').toUpperCase().trim();
-                const textoEscala = ciudadEscala || paisEscala;
+                const escalaNormalizada = construirEscalaNormalizada(escala);
+                const textoEscala = escalaNormalizada.label;
                 if (!textoEscala) return;
 
-                const claveVisible = textoEscala.normalize('NFD').replace(/[̀-ͯ]/g, '');
+                const claveVisible = escalaNormalizada.resumen.normalize('NFD').replace(/[̀-ͯ]/g, '');
                 if (escalasYaIncluidas.has(claveVisible)) return;
 
                 escalasYaIncluidas.add(claveVisible);
@@ -1901,7 +1925,9 @@
                 const ciudadEscala = selectCiudadEscala ? (selectCiudadEscala.value || '') : '';
                 nuevoItem.destino = escalaNombre;
                 nuevoItem.destinoId = escalaId;
+                nuevoItem.destinoLabel = escalaNombre;
                 nuevoItem.ciudad = ciudadEscala;
+                nuevoItem.ciudadLabel = ciudadEscala;
                 nuevoItem.horas = document.getElementById('input-viaje-horas').value || '0';
                 nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
                 nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
@@ -1909,7 +1935,9 @@
                 upsertEscalaDetalle(dataPais, {
                     pais: escalaNombre,
                     paisId: escalaId,
+                    paisLabel: escalaNombre,
                     ciudad: ciudadEscala,
+                    ciudadLabel: ciudadEscala,
                     origen: 'itinerario'
                 });
             } else if (tipo === 'hospedaje') {
@@ -1954,7 +1982,9 @@
                     const resumenEscala = obtenerResumenEscala({
                         pais: item.destino,
                         paisId: item.destinoId,
-                        ciudad: item.ciudad
+                        paisLabel: item.destinoLabel,
+                        ciudad: item.ciudad,
+                        ciudadLabel: item.ciudadLabel
                     });
                     detalles = `Escala: ${resumenEscala || (item.destino || 'SIN ESCALA')}<br>Costo: $${item.costo}`;
                 }
