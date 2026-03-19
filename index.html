@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nuestra Historia - Diario de Viajes</title>
-    
+
     <!-- Librerías Externas -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet">
-    
+
     <style>
         /* === VARIABLES Y DISEÑO === */
         :root {
@@ -36,7 +36,7 @@
 
         /* === CONTENEDORES === */
         .contenedor-principal { display: flex; width: 100%; height: 100%; padding: 15px; box-sizing: border-box; gap: 15px; }
-        
+
         .sidebar {
             width: 280px;
             background-color: var(--panel-bg);
@@ -53,7 +53,7 @@
         .icono-magia { color: #FFCA28; fill: #FFE082; }
 
         .menu-lateral { display: flex; flex-direction: column; gap: 18px; }
-        
+
         .btn-menu {
             background: #FFF8FA; border: 3px solid #F8BBD0; color: #D81B60;
             padding: 14px 20px; border-radius: 50px; cursor: pointer; text-align: left;
@@ -61,7 +61,7 @@
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             font-family: 'Quicksand', sans-serif; font-size: 1.05rem; font-weight: 700;
         }
-        
+
         .btn-menu:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 20px var(--btn-glow); border-color: var(--primary); }
         .btn-menu.activo { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 25px var(--btn-glow), 0 8px 15px rgba(255, 64, 129, 0.3); transform: translateY(-2px); }
 
@@ -86,6 +86,22 @@
         .pais.sonado { fill: #FFB300; stroke: #FFFFFF; stroke-width: 2px; }
         .pais.visitado.sonado { fill: #FF7043; } 
         .provincia.visitada {fill: #FF0000 !important;}        /* === COMPONENTES FLOTANTES === */
+        #mapa-error-banner {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2500;
+            background: #FFF3E0;
+            border: 2px solid #FB8C00;
+            border-radius: 12px;
+            color: #E65100;
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 10px 14px;
+            max-width: calc(100% - 30px);
+            box-shadow: 0 8px 20px rgba(251, 140, 0, 0.2);
+        }
         #tooltip {
             position: absolute; background: #FFFFFF; border: 4px solid var(--secondary);
             padding: 10px 20px; border-radius: 30px; color: var(--secondary); pointer-events: none;
@@ -108,7 +124,7 @@
         .menu-titulo { margin: 0; font-size: 1.3rem; font-weight: 900; }
         .btn-cerrar-menu { background: #FCE4EC; border: none; color: #D81B60; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
         .btn-cerrar-menu:hover { background: var(--primary); color: white; transform: scale(1.1); }
-        
+
         .opciones-menu { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
         .opciones-menu li { padding: 10px 15px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s; font-size: 1rem; font-weight: 700; color: #546E7A; background: #F5F5F5; }
         .opciones-menu li:hover { background: #E1F5FE; color: var(--secondary); transform: translateX(5px); box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2); }
@@ -119,9 +135,9 @@
         /* === SECCIÓN DE RECUERDOS Y SOÑADOS === */
         .encabezado-seccion { padding: 20px 30px; border-bottom: 4px dashed #E1F5FE; background: #FFFFFF; z-index: 5; }
         h2 { color: var(--primary); font-size: 2rem; font-weight: 900; margin: 0; text-shadow: 2px 2px 0px #F8BBD0; display: flex; align-items: center; gap: 15px;}
-        
+
         .contenedor-scroll { flex-grow: 1; overflow-y: auto; padding: 30px; background: #FAFAFA; }
-        
+
         .lista-paises { display: flex; flex-direction: column; gap: 20px; }
         .tarjeta-pais { 
             background: #FFFFFF; border: 3px solid #B3E5FC; border-radius: 25px; padding: 20px; 
@@ -133,7 +149,7 @@
         .icono-bandera { width: 50px; height: 50px; background: #E1F5FE; color: var(--secondary); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
         .nombre-pais-lista { font-size: 1.4rem; font-weight: 800; color: #455A64; margin: 0; }
         .zonas-badge { background: #FCE4EC; color: #D81B60; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 5px; display: inline-block; }
-        
+
         .btn-accion-pais { 
             background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 50px; 
             font-family: 'Quicksand', sans-serif; font-size: 1.1rem; font-weight: 800; cursor: pointer; 
@@ -153,7 +169,7 @@
             border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; 
         }
         .btn-volver:hover { border-color: var(--secondary); color: var(--secondary); transform: translateX(-5px); }
-        
+
         .btn-borrar-itinerario {
             background: #FFEBEE; border: 2px solid #FFCDD2; color: #F44336;
             padding: 10px 18px; border-radius: 15px; font-weight: bold; font-family: 'Quicksand'; font-size: 1rem;
@@ -177,7 +193,7 @@
             font-family: 'Quicksand', sans-serif; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
         }
         .btn-tipo-item:hover, .btn-tipo-item.seleccionado { background: #E1F5FE; border-color: var(--secondary); color: var(--secondary); transform: translateY(-2px); }
-        
+
         .formulario-itinerario { display: none; background: #F0FBFF; padding: 20px; border-radius: 20px; border: 2px dashed #B3E5FC; }
         .formulario-itinerario.activo { display: block; animation: scaleIn 0.3s ease; }
         .campo-form { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
@@ -191,10 +207,10 @@
 
         .linea-tiempo { position: relative; padding-left: 30px; margin-top: 20px; }
         .linea-tiempo::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 4px; background: #E1F5FE; border-radius: 4px; }
-        
+
         .item-timeline { position: relative; margin-bottom: 25px; background: #FFFFFF; border: 2px solid #E1F5FE; border-radius: 20px; padding: 15px 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: 0.2s; }
         .item-timeline:hover { border-color: #B3E5FC; transform: translateX(5px); }
-        
+
         .punto-timeline { 
             position: absolute; left: -30px; top: 20px; width: 24px; height: 24px; border-radius: 50%; 
             display: flex; justify-content: center; align-items: center; background: white; border: 4px solid var(--secondary); z-index: 2;
@@ -252,6 +268,22 @@
         let paisesVisitados = {};
         let provinciasVisitadas = {}; 
         let destinosSonados = {}; 
+        const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
+
+        function manejarErrorMapaDetallado(err) {
+            const mensaje = `No se pudo cargar ${ESTADOS_PROVINCIAS_URL}. Verifica tu conexión a internet y CORS.`;
+            console.error(err);
+
+            const contenedorMapa = document.getElementById('world-map');
+            if (contenedorMapa && !document.getElementById('mapa-error-banner')) {
+                const banner = document.createElement('div');
+                banner.id = 'mapa-error-banner';
+                banner.textContent = mensaje;
+                contenedorMapa.appendChild(banner);
+            }
+
+            return mensaje;
+        }
 
         window.irAPantalla = function(targetId) {
             document.querySelectorAll('.btn-menu').forEach(b => {
@@ -262,7 +294,7 @@
                 p.classList.remove('pantalla-activa');
                 p.style.display = 'none';
             });
-            
+
             const targetPanel = document.getElementById(targetId);
             if (targetPanel) {
                 targetPanel.style.display = 'flex';
@@ -302,11 +334,11 @@
             const path = d3.geoPath().projection(projection);
 
             d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(function(data) {
-                
+
                 const indiceUSA = data.features.findIndex(f => f.id === "USA");
                 if (indiceUSA !== -1) {
                     const usaFeature = data.features[indiceUSA];
-                    
+
                     if (usaFeature.geometry && usaFeature.geometry.type === "MultiPolygon") {
                         const poligonosUSA = [];
                         const poligonosAlaska = [];
@@ -355,7 +387,7 @@
                     })
                     .on("click", function(event, d) {
                         event.stopPropagation();
-                        
+
                         const nombrePais = d.properties.name;
                         const idPais = d.id; 
                         const [x, y] = d3.pointer(event, document.getElementById("world-map"));
@@ -365,7 +397,7 @@
                         const esVisitado = elementoPais.classed("visitado");
                         const esSonado = destinosSonados[idPais] ? true : false;
                         const colorTitulo = esVisitado ? "#00BCD4" : (esSonado ? "#FFB300" : "#FF4081"); 
-                        
+
                         // Menú Actualizado según instrucciones
                         menu.html(`
                             <div class="menu-header">
@@ -421,11 +453,11 @@
                             // Planear aventura se queda fijo
                             d3.select("#opc-planear").on("click", function() {
                                 if (!esSonado) {
-                                    destinosSonados[idPais] = { nombre: nombrePais, itinerario: [] };
+                                    destinosSonados[idPais] = { nombre: nombrePais, destinoFinal: nombrePais, escalas: [], escalasCiudades: [], itinerario: [] };
                                     elementoPais.classed("sonado", true);
                                 }
                                 menu.classed("menu-visible", false).classed("menu-oculto", true);
-                                
+
                                 irAPantalla('vista-por-vivir');
                                 setTimeout(() => abrirPlanificador(idPais), 50);
                             });
@@ -448,270 +480,268 @@
             });
         }
 
-       function abrirPantallaPais(idPais, nombrePais, geoData) {
-
-    const width = 800;
-    const height = 450;
-
-    const container = d3.select("#world-map");
-
-    d3.select("#mapa-svg").style("display", "none");
-
-    const svgPais = container.append("svg")
-        .attr("viewBox", `0 0 ${width} ${height}`)
-        .attr("id", "mapa-detalle");
-
-    const gDetalle = svgPais.append("g");
-
-    let projection;
-
-if (nombrePais === "Russia") {
-
-    projection = d3.geoMercator()
-        .center([100, 60])   // centra Siberia
-        .scale(250)
-        .translate([width/2, height/2]);
-
-}if (nombrePais === "Russia") {
-
-    geoData = JSON.parse(JSON.stringify(geoData));
-
-    geoData.geometry.coordinates = geoData.geometry.coordinates.map(poly => {
-
-        return poly.map(ring => {
-
-            return ring.map(coord => {
-
-                let lon = coord[0];
-
-                if (lon < -150) lon += 360;
-
-                return [lon, coord[1]];
-
-            });
-            
-
-        });
-
-    });
-
-} 
-else {
-
-    projection = d3.geoMercator()
-        .fitExtent([[40,40],[width-80,height-80]], geoData);
-
-}
-
-    const path = d3.geoPath().projection(projection);
-
-    gDetalle.append("path")
-        .datum(geoData)
-        .attr("d", path)
-        .style("fill","#B2EBF2")
-        .style("stroke","#00BCD4")
-        .style("stroke-width","3");
-
-    // Cargar provincias del mundo
-    d3.json("mapas/estados_provincias.json").then(function(data){
-
-        // FILTRAR SOLO PROVINCIAS DEL PAIS
-        const provincias = data.features.filter(p =>
-            p.properties.admin === nombrePais
-        );
-
-        gDetalle.selectAll(".provincia")
-            .data(provincias)
-            .enter()
-            .append("path")
-            .attr("class","provincia")
-            .attr("id", function(d){
-                // usa d.id si existe, sino una versión segura del nombre
-                return d.id || (d.properties.iso_3166_2 || d.properties.name || d.properties.name_en).replace(/\s+/g,'_');
-            })
-            .attr("d", path)
-            .style("fill", function(d){
-                const provId = d.id || (d.properties.iso_3166_2 || d.properties.name || d.properties.name_en);
-                // Aquí es donde le damos el toque rojo pasión si ya estuviste ahí
-                if (provinciasVisitadas[idPais] && provinciasVisitadas[idPais][provId]) return "#FF0000";
-                if (destinosSonados[idPais] && destinosSonados[idPais].provincias && destinosSonados[idPais].provincias[provId]) return "#FFB300";
-                return "#ffffff";
-            })
-    .style("stroke","#FF4081")
-    .style("stroke-width","1.2px")
-
-            .on("mouseover", function(event,d){
-
-                const nombre =
-                    d.properties.name ||
-                    d.properties.name_en ||
-                    "Provincia";
-
-                const [x,y] = d3.pointer(event,container.node());
-
-                d3.select("#tooltip")
-                    .style("left",x+"px")
-                    .style("top",y+"px")
-                    .classed("tooltip-visible",true);
-
-                d3.select("#tooltip-nombre").text(nombre);
-
-                d3.select(this).style("fill","#F8BBD0");
-
-            })
-
-            .on("mouseout",function(){
-
-                d3.select("#tooltip")
-                    .classed("tooltip-visible",false);
-
-                d3.select(this).style("fill","#ffffff");
-
-            })
-
-            .on("click",function(event,d){
-
-    event.stopPropagation();
-
-    const nombreProvincia =
-        d.properties.name ||
-        d.properties.name_en ||
-        "Provincia";
-
-    const idProvincia =
-        d.properties.id ||
-        d.properties.name ||
-        Math.random().toString(36).substring(7);
-
-    const [x,y] = d3.pointer(event,container.node());
-
-    const menu = d3.select("#menu-contextual");
-
-    const esVisitada =
-        provinciasVisitadas[idPais] &&
-        provinciasVisitadas[idPais][idProvincia];
-
-    menu.html(`
-        <div class="menu-header">
-            <h3 class="menu-titulo" style="color:#FF4081">${nombreProvincia}</h3>
-            <button id="cerrar-menu" class="btn-cerrar-menu">&times;</button>
-        </div>
-
-        <ul class="opciones-menu">
-
-            <li id="opc-prov-visitado">
-                <i data-lucide="check-circle"></i>
-                ${esVisitada ? "Quitar visita" : "¡Ya estuve aquí!"}
-            </li>
-
-            <li id="opc-prov-planear">
-                <i data-lucide="map"></i>
-                Planear aventura
-            </li>
-
-        </ul>
-    `);
-
-    lucide.createIcons();
-
-    menu.classed("menu-oculto",false)
-        .classed("menu-visible",true)
-        .style("left",x+"px")
-        .style("top",y+"px");
-d3.select("#opc-prov-visitado").on("click",function(){
-
-    if(!provinciasVisitadas[idPais]){
-        provinciasVisitadas[idPais]={};
-    }
-
-    const provNode = d3.select(this); // no es el path; vamos a buscar el path por su id
-    const selectorPath = `#${CSS.escape(idProvincia)}`;
-    const pathElem = d3.select(selectorPath);
-
-    if(!provinciasVisitadas[idPais][idProvincia]){
-
-        // marcar como visitada en memoria
-        provinciasVisitadas[idPais][idProvincia]={
-            nombre:nombreProvincia
-        };
-
-        // marcar visualmente la provincia
-        pathElem.classed('visitada', true);
-
-        // asegurar que el país también exista en recuerdos
-        if(!paisesVisitados[idPais]){
-            paisesVisitados[idPais]={
-                nombre: nombrePais,
-                albumes: [],
-                historias: [],
-                musica: null
-            };
+       function normalizarTextoMapa(texto) {
+            return (texto || "")
+                .normalize("NFD")
+                .replace(/[̀-ͯ]/g, "")
+                .replace(/[^a-zA-Z0-9 ]/g, "")
+                .trim()
+                .toLowerCase();
         }
 
-        // marcar país visual (si querés que el país cambie cuando cualquier provincia se visite)
-        d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
+        function obtenerClavesPais(nombrePais, idPais) {
+            const claves = new Set([normalizarTextoMapa(nombrePais)]);
+            const equivalencias = {
+                "united states": ["united states of america", "usa", "us"],
+                "united states of america": ["united states", "usa", "us"],
+                "russian federation": ["russia"],
+                "russia": ["russian federation"],
+                "czech republic": ["czechia"],
+                "czechia": ["czech republic"],
+                "ivory coast": ["cote divoire"],
+                "cote divoire": ["ivory coast"],
+                "south korea": ["korea republic of", "republic of korea"],
+                "north korea": ["korea democratic peoples republic of"],
+                "laos": ["lao pdr", "lao peoples democratic republic"],
+                "eswatini": ["swaziland"],
+                "myanmar": ["burma"]
+            };
 
-    } else {
-
-        // quitar marca en memoria
-        delete provinciasVisitada[idPais][idProvincia];
-
-        // quitar marca visual
-        pathElem.classed('visitada', false);
-
-        // si el país NO tiene más provincias visitadas, opcionalmente quitar la marca país
-        const restantes = Object.keys(provinciasVisitadas[idPais] || {}).length;
-        if (restantes === 0) {
-            // si el país no tiene recuerdos propios (albumes/historias), lo dejamos no-visitado
-            const tieneRecuerdosPais = paisesVisitados[idPais] && ((paisesVisitados[idPais].albumes && paisesVisitados[idPais].albumes.length>0) || (paisesVisitados[idPais].historias && paisesVisitados[idPais].historias.length>0));
-            if(!tieneRecuerdosPais){
-                d3.select(`.pais[id="${idPais}"]`).classed('visitado', false);
+            const clavePrincipal = normalizarTextoMapa(nombrePais);
+            if (equivalencias[clavePrincipal]) {
+                equivalencias[clavePrincipal].forEach(v => claves.add(v));
             }
+
+            if (idPais === "USA") {
+                ["united states", "united states of america", "usa", "us"].forEach(v => claves.add(v));
+            }
+
+            return Array.from(claves);
         }
 
-    }
+        function obtenerIdProvincia(feature) {
+            if (!feature) return "";
+            const properties = feature.properties || {};
+            return (feature.id || properties.iso_3166_2 || properties.name || properties.name_en || "").toString();
+        }
 
-    menu.classed("menu-visible",false)
-        .classed("menu-oculto",true);
-
-    renderizarPantallaRecuerdos();
-
-});
+        function obtenerIdPathProvincia(idProvincia) {
+            return `prov-${normalizarTextoMapa(idProvincia || "provincia").replace(/\s+/g, '-')}`;
+        }
 
 
+        function esRegionRemotaAExcluir(feature, idPais) {
+            if (!feature || !feature.properties || !idPais) return false;
 
-    d3.select("#opc-prov-planear").on("click",function(){
+            const propiedades = feature.properties;
+            const nombreRegion = normalizarTextoMapa(
+                propiedades.name || propiedades.name_en || propiedades.woe_name || propiedades.name_alt || ""
+            );
+            const codigoRegion = (propiedades.postal || propiedades.iso_3166_2 || "").toUpperCase();
 
-        if(!destinosSonados[idPais]){
-
-            destinosSonados[idPais]={
-                nombre:nombrePais,
-                itinerario:[]
+            const coincidePatron = (patrones = [], codigos = []) => {
+                const coincideNombre = patrones.some(p => nombreRegion.includes(p));
+                const coincideCodigo = codigos.some(c => codigoRegion === c || codigoRegion.endsWith(`-${c}`));
+                return coincideNombre || coincideCodigo;
             };
 
+            if (idPais === "USA") {
+                return coincidePatron(
+                    ["alaska", "hawaii", "aleut"],
+                    ["AK", "HI"]
+                );
+            }
+
+            if (idPais === "FRA") {
+                return coincidePatron(
+                    ["french guiana", "guyane", "guadeloupe", "martinique", "reunion", "mayotte", "saint pierre", "new caledonia", "polynesia"],
+                    ["GF", "GP", "MQ", "RE", "YT", "PM", "NC", "PF", "BL", "MF", "WF", "TF"]
+                );
+            }
+
+            if (idPais === "RUS") {
+                return coincidePatron(
+                    ["chukchi", "chukot", "kamchatka", "sakhalin", "kuril", "nenets"],
+                    ["CHU", "KAM", "SAK", "NEN"]
+                );
+            }
+
+            return false;
         }
 
-        menu.classed("menu-visible",false)
-            .classed("menu-oculto",true);
+        function provinciaPerteneceAPais(feature, nombrePais, idPais, geoData = null) {
+            if (!feature || !feature.properties) return false;
+            if (esRegionRemotaAExcluir(feature, idPais)) return false;
 
-        irAPantalla('vista-por-vivir');
+            if (geoData && feature.geometry) {
+                try {
+                    const centroide = d3.geoCentroid(feature);
+                    if (Array.isArray(centroide) && centroide.length === 2 && d3.geoContains(geoData, centroide)) {
+                        return true;
+                    }
+                } catch (e) {
+                    // Si falla el cálculo espacial, usamos el plan B por nombres/códigos.
+                }
+            }
 
-        setTimeout(()=>abrirPlanificador(idPais),50);
+            const admin = normalizarTextoMapa(feature.properties.admin);
+            const geonunit = normalizarTextoMapa(feature.properties.geonunit);
+            const codigosFeature = [
+                feature.properties.sov_a3,
+                feature.properties.adm0_a3,
+                feature.properties.iso_a3,
+                feature.properties.gu_a3,
+                feature.properties.brk_a3
+            ].map(v => (v || "").toUpperCase()).filter(Boolean);
 
-    });
+            const clavesPais = obtenerClavesPais(nombrePais, idPais);
+            return clavesPais.includes(admin) || clavesPais.includes(geonunit) || (idPais && codigosFeature.includes(idPais));
+        }
 
+        function abrirPantallaPais(idPais, nombrePais, geoData) {
+            const width = 800;
+            const height = 450;
+            const container = d3.select("#world-map");
 
+            d3.select("#mapa-svg").style("display", "none");
+            d3.select("#mapa-detalle").remove();
 
-    d3.select("#cerrar-menu")
-        .on("click",()=>menu.classed("menu-visible",false)
-        .classed("menu-oculto",true));
+            const svgPais = container.append("svg")
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .attr("id", "mapa-detalle");
 
-});
+            const gDetalle = svgPais.append("g");
+            let path = d3.geoPath().projection(
+                d3.geoMercator().fitExtent([[40, 40], [width - 80, height - 80]], geoData)
+            );
 
-    });
+            d3.json(ESTADOS_PROVINCIAS_URL).then(function(data) {
+                const provincias = data.features.filter(p => {
+                    const geometria = p.geometry && (p.geometry.type === "Polygon" || p.geometry.type === "MultiPolygon");
+                    if (!geometria) return false;
+                    return provinciaPerteneceAPais(p, nombrePais, idPais, geoData);
+                });
 
-    mostrarBotonRegreso();
-}
+                if (provincias.length === 0) {
+                    alert(`No encontramos ciudades/provincias para ${nombrePais} en ${ESTADOS_PROVINCIAS_URL}`);
+                    return;
+                }
+
+                const proyeccionDetalle = d3.geoMercator().fitExtent(
+                    [[40, 40], [width - 80, height - 80]],
+                    { type: "FeatureCollection", features: provincias }
+                );
+                path = d3.geoPath().projection(proyeccionDetalle);
+
+                gDetalle.append("path")
+                    .datum(geoData)
+                    .attr("d", path)
+                    .style("fill", "#B2EBF2")
+                    .style("stroke", "#00BCD4")
+                    .style("stroke-width", "3");
+
+                gDetalle.selectAll(".provincia")
+                    .data(provincias)
+                    .enter()
+                    .append("path")
+                    .attr("class", "provincia")
+                    .attr("id", d => obtenerIdPathProvincia(obtenerIdProvincia(d)))
+                    .attr("d", path)
+                    .style("fill", function(d) {
+                        const provId = obtenerIdProvincia(d);
+                        if (provinciasVisitadas[idPais] && provinciasVisitadas[idPais][provId]) return "#FF0000";
+                        if (destinosSonados[idPais] && destinosSonados[idPais].provincias && destinosSonados[idPais].provincias[provId]) return "#FFB300";
+                        return "#FFFFFF";
+                    })
+                    .style("stroke", "#FF4081")
+                    .style("stroke-width", "1.2px")
+                    .on("mouseover", function(event, d) {
+                        const nombre = d.properties.name || d.properties.name_en || "Provincia";
+                        const [x, y] = d3.pointer(event, container.node());
+
+                        d3.select("#tooltip")
+                            .style("left", x + "px")
+                            .style("top", y + "px")
+                            .classed("tooltip-oculto", false)
+                            .classed("tooltip-visible", true);
+
+                        d3.select("#tooltip-nombre").text(nombre);
+                    })
+                    .on("mouseout", function() {
+                        d3.select("#tooltip")
+                            .classed("tooltip-visible", false)
+                            .classed("tooltip-oculto", true);
+                    })
+                    .on("click", function(event, d) {
+                        event.stopPropagation();
+
+                        const nombreProvincia = d.properties.name || d.properties.name_en || "Provincia";
+                        const idProvincia = obtenerIdProvincia(d);
+                        const idPathProvincia = obtenerIdPathProvincia(idProvincia);
+                        const [x, y] = d3.pointer(event, container.node());
+                        const menu = d3.select("#menu-contextual");
+                        const esVisitada = provinciasVisitadas[idPais] && provinciasVisitadas[idPais][idProvincia];
+
+                        menu.html(`
+                            <div class="menu-header">
+                                <h3 class="menu-titulo" style="color:#FF4081">${nombreProvincia}</h3>
+                                <button id="cerrar-menu" class="btn-cerrar-menu">&times;</button>
+                            </div>
+                            <ul class="opciones-menu">
+                                <li id="opc-prov-visitado">
+                                    <i data-lucide="check-circle"></i>
+                                    ${esVisitada ? "Quitar visita" : "¡Ya estuve aquí!"}
+                                </li>
+                                <li id="opc-prov-planear">
+                                    <i data-lucide="map"></i>
+                                    Planear aventura
+                                </li>
+                            </ul>
+                        `);
+
+                        lucide.createIcons();
+                        menu.classed("menu-oculto", false)
+                            .classed("menu-visible", true)
+                            .style("left", x + "px")
+                            .style("top", y + "px");
+
+                        d3.select("#opc-prov-visitado").on("click", function() {
+                            if (!provinciasVisitadas[idPais]) provinciasVisitadas[idPais] = {};
+                            const selectorPath = `#${CSS.escape(idPathProvincia)}`;
+                            const pathElem = d3.select(selectorPath);
+
+                            if (!provinciasVisitadas[idPais][idProvincia]) {
+                                provinciasVisitadas[idPais][idProvincia] = { nombre: nombreProvincia };
+                                pathElem.classed('visitada', true).style("fill", "#FF0000");
+
+                                if (!paisesVisitados[idPais]) {
+                                    paisesVisitados[idPais] = { nombre: nombrePais, albumes: [], historias: [], musica: null };
+                                }
+                                d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
+                            } else {
+                                delete provinciasVisitadas[idPais][idProvincia];
+                                pathElem.classed('visitada', false).style("fill", "#FFFFFF");
+                            }
+
+                            menu.classed("menu-visible", false).classed("menu-oculto", true);
+                            renderizarPantallaRecuerdos();
+                        });
+
+                        d3.select("#opc-prov-planear").on("click", function() {
+                            if (!destinosSonados[idPais]) destinosSonados[idPais] = { nombre: nombrePais, destinoFinal: nombrePais, escalas: [], escalasCiudades: [], itinerario: [] };
+                            menu.classed("menu-visible", false).classed("menu-oculto", true);
+                            irAPantalla('vista-por-vivir');
+                            setTimeout(() => abrirPlanificador(idPais), 50);
+                        });
+
+                        d3.select("#cerrar-menu").on("click", () => menu.classed("menu-visible", false).classed("menu-oculto", true));
+                    });
+            }).catch(err => {
+                alert(manejarErrorMapaDetallado(err));
+            });
+
+            mostrarBotonRegreso();
+        }
 
         function mostrarBotonRegreso() {
             d3.select("#btn-volver-mapa").remove(); 
@@ -787,7 +817,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
                 idsPaises.forEach(id => {
                     const pais = destinosSonados[id];
                     const numItems = pais.itinerario.length;
-                    const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+                    const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
                     listaHTML.innerHTML += `
                         <div class="tarjeta-pais">
                             <div class="info-pais">
@@ -805,7 +835,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
         window.renderizarPantallaRecuerdos = function() {
             const contenedor = document.getElementById('vista-vividas');
             const idsPaises = Object.keys(paisesVisitados);
-            
+
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
                     <h2><i data-lucide="camera"></i> Galería de Recuerdos</h2>
@@ -886,6 +916,45 @@ d3.select("#opc-prov-visitado").on("click",function(){
             document.getElementById('selector-nuevo-recuerdo').style.display = 'block';
         };
 
+        window.cargarCiudadesAventura = function() {
+            const selectPais = document.getElementById('select-pais-nuevo');
+            const selectCiudad = document.getElementById('select-ciudad-aventura');
+            if (!selectPais || !selectCiudad) return;
+
+            const idPais = selectPais.value;
+            if (!idPais) {
+                selectCiudad.innerHTML = '<option value="" disabled selected>Elige una ciudad...</option>';
+                return;
+            }
+
+            const nombrePais = selectPais.options[selectPais.selectedIndex]?.text || "";
+            selectCiudad.innerHTML = '<option value="" disabled selected>Cargando ciudades...</option>';
+
+            d3.json(ESTADOS_PROVINCIAS_URL).then(function(data) {
+                const ciudades = data.features
+                    .filter(p => provinciaPerteneceAPais(p, nombrePais, idPais))
+                    .map(p => p.properties.name || p.properties.name_en || "")
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b));
+
+                const ciudadesUnicas = [...new Set(ciudades)];
+                if (ciudadesUnicas.length === 0) {
+                    selectCiudad.innerHTML = '<option value="" disabled selected>No encontramos ciudades</option>';
+                    return;
+                }
+
+                selectCiudad.innerHTML = '<option value="" disabled selected>Elige una ciudad...</option>';
+                ciudadesUnicas.forEach(ciudad => {
+                    const opt = document.createElement('option');
+                    opt.value = ciudad;
+                    opt.textContent = ciudad;
+                    selectCiudad.appendChild(opt);
+                });
+            }).catch(function() {
+                selectCiudad.innerHTML = '<option value="" disabled selected>No se pudieron cargar ciudades</option>';
+            });
+        };
+
         window.cargarCiudadesRecuerdo = function() {
             const selectPais = document.getElementById('select-pais-recuerdo');
             const idPais = selectPais.value;
@@ -898,15 +967,19 @@ d3.select("#opc-prov-visitado").on("click",function(){
             contenedor.style.display = 'block';
             selectCiudad.innerHTML = '<option value="" disabled selected>Buscando Ciudades...</option>';
 
-            d3.json("mapas/estados_provincias.json").then(function(data) {
-                const ciudades = data.features.filter(p => p.properties.admin === nombrePais);
+            d3.json(ESTADOS_PROVINCIAS_URL).then(function(data) {
+                const ciudades = data.features.filter(p => provinciaPerteneceAPais(p, nombrePais, idPais));
                 selectCiudad.innerHTML = '<option value="" disabled selected>¿Ciudad?</option>';
-                
+
                 ciudades.sort((a,b) => (a.properties.name || "").localeCompare(b.properties.name || "")).forEach(prov => {
                     const nombre = prov.properties.name || "Provincia";
                     const idProv = prov.id || (prov.properties.name).replace(/\s+/g,'_');
                     selectCiudad.innerHTML += `<option value="${idProv}">${nombre}</option>`;
                 });
+            }).catch(err => {
+                const mensaje = manejarErrorMapaDetallado(err);
+                alert(mensaje);
+                selectCiudad.innerHTML = '<option value="" disabled selected>No se pudieron cargar ciudades.</option>';
             });
         };
 
@@ -930,7 +1003,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
                 if (!provinciasVisitadas[idPais][idProv]) {
                     provinciasVisitadas[idPais][idProv] = { nombre: nombreProv, albumes: [], historias: [] };
                 }
-                
+
                 // Forzar el pintado de la ciudad (por si el mapa detallado está cargado)
                 try {
                     d3.select(`#${CSS.escape(idProv)}`).classed('visitada', true);
@@ -943,11 +1016,11 @@ d3.select("#opc-prov-visitado").on("click",function(){
                 alert("Por favor, selecciona país y ciudad.");
             }
         };
-        
+
         window.abrirAlbum = function(idPais, idProvincia = null) {
             const pais = paisesVisitados[idPais];
             const scrollArea = document.getElementById('scroll-recuerdos');
-            
+
             // Si NO hay provincia seleccionada, siempre mostramos el menú de provincias (eliminamos el acceso general)
             if (!idProvincia) {
                 const provs = provinciasVisitadas[idPais] || {};
@@ -1003,17 +1076,17 @@ d3.select("#opc-prov-visitado").on("click",function(){
             `;
             document.body.appendChild(modal);
             lucide.createIcons();
-            
-            // Cargamos las provincias bien calientes desde nuestro archivo JSON
-            d3.json("mapas/estados_provincias.json").then(function(data){
-                const provincias = data.features.filter(p => p.properties.admin === pais.nombre);
+
+            // Cargamos las provincias desde la fuente remota
+            d3.json(ESTADOS_PROVINCIAS_URL).then(function(data){
+                const provincias = data.features.filter(p => provinciaPerteneceAPais(p, pais.nombre, idPais));
                 const select = document.getElementById('select-nueva-ciudad');
                 select.innerHTML = '<option value="" disabled selected>Elegí un destino ...</option>';
-                
+
                 provincias.sort((a,b) => (a.properties.name || "").localeCompare(b.properties.name || "")).forEach(prov => {
                     const nombre = prov.properties.name || prov.properties.name_en || "Provincia";
-                    const idProv = prov.id || (prov.properties.iso_3166_2 || prov.properties.name || prov.properties.name_en).replace(/\s+/g,'_');
-                    
+                    const idProv = obtenerIdProvincia(prov);
+
                     // Solo te muestro las que todavía no me hiciste conocer...
                     if (!provinciasVisitadas[idPais] || !provinciasVisitadas[idPais][idProv]) {
                         const opt = document.createElement('option');
@@ -1022,21 +1095,35 @@ d3.select("#opc-prov-visitado").on("click",function(){
                         select.appendChild(opt);
                     }
                 });
-                
+
                 if(select.options.length === 1) {
                     select.innerHTML = '<option value="" disabled selected>Elige una ciudad</option>';
                 }
+            }).catch(err => {
+                const mensaje = manejarErrorMapaDetallado(err);
+                alert(mensaje);
+                const select = document.getElementById('select-nueva-ciudad');
+                if (select) {
+                    select.innerHTML = '<option value="" disabled selected>No se pudieron cargar destinos.</option>';
+                }
             });
-            
+
             // Función para clavar nuestra nueva conquista
             document.getElementById('btn-guardar-ciudad').onclick = function() {
                 const select = document.getElementById('select-nueva-ciudad');
                 const idProvinciaGenerado = select.value;
                 const nombre = select.options[select.selectedIndex]?.text;
-                
+
                 if (idProvinciaGenerado) {
                     if (!provinciasVisitadas[idPais]) provinciasVisitadas[idPais] = {};
-                    
+                    const idPathProvincia = obtenerIdPathProvincia(idProvinciaGenerado);
+                    provinciasVisitadas[idPais][idProvinciaGenerado] = {
+                        nombre,
+                        albumes: [],
+                        historias: [],
+                        musica: null
+                    };
+
                     // Marcamos el país como visitado automáticamente
                     if (!paisesVisitados[idPais]) {
                         paisesVisitados[idPais] = {
@@ -1050,12 +1137,12 @@ d3.select("#opc-prov-visitado").on("click",function(){
                     // Pintamos en rojo tanto el país como la ciudad en el mapa
                     d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
                     try {
-                        d3.select(`#${CSS.escape(idProvinciaGenerado)}`).classed('visitada', true);
+                        d3.select(`#${CSS.escape(idPathProvincia)}`).classed('visitada', true).style("fill", "#FF0000");
                     } catch(e) { console.log("No se pudo pintar la ciudad aún"); }
-                    
+
                     modal.remove(); 
                     window.abrirAlbum(idPais);
-                    
+
                     // Aseguramos que el país quede marcado como totalmente nuestro
                     if(!paisesVisitados[idPais]){
                         paisesVisitados[idPais] = {
@@ -1068,12 +1155,12 @@ d3.select("#opc-prov-visitado").on("click",function(){
 
                     // Le damos el colorcito de "visitado" al país entero en el mapa mundial
                     d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
-                    
+
                     // Intentamos pintar la provincia si tenemos el mapita detallado abierto en el fondo
                     try {
-                        d3.select(`#${CSS.escape(idProvinciaGenerado)}`).classed('visitada', true);
+                        d3.select(`#${CSS.escape(idPathProvincia)}`).classed('visitada', true).style("fill", "#FF0000");
                     } catch(e) {}
-                    
+
                     modal.remove(); 
                     window.abrirAlbum(idPais); 
                 } else {
@@ -1086,7 +1173,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
             const pais = paisesVisitados[idPais];
             let objDestino = pais;
             let nombreTitulo = pais.nombre;
-            
+
             if (idProvincia) {
                 objDestino = provinciasVisitadas[idPais][idProvincia];
                 nombreTitulo = `${objDestino.nombre} (${pais.nombre})`;
@@ -1094,10 +1181,10 @@ d3.select("#opc-prov-visitado").on("click",function(){
 
             if (!objDestino.albumes) objDestino.albumes = [];
             if (!objDestino.historias) objDestino.historias = [];
-            
+
             const scrollArea = document.getElementById('scroll-recuerdos');
             const tieneMusica = !!objDestino.musica;
-            
+
             // Lógica de navegación: si estamos dentro de una ciudad, "Volver" nos lleva a la lista de ciudades.
             const btnVolverAccion = idProvincia ? `abrirAlbum('${idPais}')` : `renderizarPantallaRecuerdos()`;
             const paramProv = idProvincia ? `'${idProvincia}'` : `null`;
@@ -1176,7 +1263,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
             const url = urlInput.value.trim();
             if (!url) return;
             if (!url.includes('youtube.com') && !url.includes('youtu.be')) { alert("Por favor, ingresa un enlace válido de YouTube."); return; }
-            
+
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
             objDestino.musica = url;
             window.abrirAlbumDetalle(idPais, idProvincia); 
@@ -1303,7 +1390,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
             const url = document.getElementById('url-carpeta-drive').value.trim();
             if (!nombre || !url) { alert("Faltan datos."); return; }
             if (!url.includes('drive.google.com')) { alert("Link no válido."); return; }
-            
+
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
             objDestino.albumes.push({ nombre, url });
             actualizarVistaAlbumes(idPais, idProvincia, 'drive');
@@ -1316,20 +1403,20 @@ d3.select("#opc-prov-visitado").on("click",function(){
         // Función para borrar todo el país de la galería y del mapa
         window.borrarRecuerdoCompleto = function(idPais) {
             const confirmacion = confirm(`¿Estás seguro de que quieres borrar todos los recuerdos de ${paisesVisitados[idPais].nombre}? Esto eliminará el país del mapa y borrará todas tus historias y álbumes.`);
-            
+
             if (confirmacion) {
                 // Eliminar del objeto de estado
                 delete paisesVisitados[idPais];
-                
+
                 // Actualizar el mapa visualmente (quitar clase CSS)
                 d3.select(`.pais[id="${idPais}"]`).classed('visitado', false);
-                
+
                 // Volver a la lista general
                 renderizarPantallaRecuerdos();
             }
         };
-        
-       function renderizarPantallaSonados() {
+
+       function renderizarPantallaSonadosLegacy() {
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
 
@@ -1361,7 +1448,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
                 const select = document.getElementById('select-pais-nuevo');
                 if (select) {
                     const paisesMapa = d3.selectAll('.pais').data();
-                    
+
                     if (paisesMapa && paisesMapa.length > 0) {
                         select.innerHTML = '<option value="" disabled selected>Elige un país...</option>';
                         const listaOrdenada = paisesMapa
@@ -1467,8 +1554,10 @@ d3.select("#opc-prov-visitado").on("click",function(){
 
         window.confirmarNuevoDestino = function() {
             const select = document.getElementById('select-pais-nuevo');
+            const selectCiudad = document.getElementById('select-ciudad-aventura');
             const id = select.value;
             const nombre = select.options[select.selectedIndex].text;
+            const ciudadSeleccionada = selectCiudad ? (selectCiudad.value || '') : '';
 
             if (!id || id === "") return;
 
@@ -1479,12 +1568,19 @@ d3.select("#opc-prov-visitado").on("click",function(){
                 destinosSonados[id] = {
                     nombre: nombre,
                     destinoFinal: nombre,
+                    ciudadDestinoFinal: ciudadSeleccionada ? ciudadSeleccionada.toUpperCase() : '',
                     escalas: [],
+                    escalasCiudades: ciudadSeleccionada ? [ciudadSeleccionada.toUpperCase()] : [],
                     itinerario: []
                 };
-                
+
                 // Pintar el mapa
                 d3.select(`.pais[id="${id}"]`).classed('sonado', true);
+            } else if (ciudadSeleccionada) {
+                const ciudadNormalizada = ciudadSeleccionada.toUpperCase();
+                destinosSonados[id].ciudadDestinoFinal = ciudadNormalizada;
+                if (!destinosSonados[id].escalasCiudades) destinosSonados[id].escalasCiudades = [];
+                if (!destinosSonados[id].escalasCiudades.includes(ciudadNormalizada)) destinosSonados[id].escalasCiudades.push(ciudadNormalizada);
             }
 
             abrirPlanificador(id);
@@ -1493,12 +1589,13 @@ d3.select("#opc-prov-visitado").on("click",function(){
         window.abrirPlanificador = function(idPais) {
             const pais = destinosSonados[idPais];
             const scrollArea = document.getElementById('scroll-sonados');
-            
-            const nombrePrincipal = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+
+            const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
 
             let nombreVisual = `<span style="color: #FF4081;">${nombrePrincipal}</span>`;
-            if (pais.escalas && pais.escalas.length > 0) {
-                nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${pais.escalas.join(' - ').toUpperCase()})</span>`;
+            const listaEscalas = pais.escalasCiudades && pais.escalasCiudades.length > 0 ? pais.escalasCiudades : (pais.escalas || []);
+            if (listaEscalas.length > 0) {
+                nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${listaEscalas.join(', ').toUpperCase()})</span>`;
             }
 
             scrollArea.innerHTML = `
@@ -1528,7 +1625,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
 
                 <div class="linea-tiempo" id="linea-tiempo-${idPais}"></div>
             `;
-            
+
             lucide.createIcons();
             dibujarItinerario(idPais);
         };
@@ -1536,6 +1633,56 @@ d3.select("#opc-prov-visitado").on("click",function(){
         window.manual_Hospedaje = (btn) => mostrarFormularioItinerario('hospedaje', btn);
         window.manual_Aventura = (btn) => mostrarFormularioItinerario('aventura', btn);
         window.manual_Restaurante = (btn) => mostrarFormularioItinerario('restaurante', btn);
+
+        function obtenerNombreCabeceraDestino(pais) {
+            const nombrePais = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+            const nombreCiudad = (pais.ciudadDestinoFinal || "").toUpperCase();
+            return nombreCiudad ? `${nombrePais}, ${nombreCiudad}` : nombrePais;
+        }
+
+        window.cargarCiudadesEscalaViaje = function() {
+            const selectPais = document.getElementById('input-viaje-destino');
+            const contenedorCiudad = document.getElementById('campo-viaje-ciudad');
+            const selectCiudad = document.getElementById('input-viaje-ciudad');
+
+            if (!selectPais || !contenedorCiudad || !selectCiudad) return;
+
+            const idPaisEscala = selectPais.value;
+            if (!idPaisEscala) {
+                contenedorCiudad.style.display = 'none';
+                selectCiudad.innerHTML = '<option value="" disabled selected>Selecciona una ciudad...</option>';
+                return;
+            }
+
+            const nombrePais = selectPais.options[selectPais.selectedIndex]?.text || "";
+            contenedorCiudad.style.display = 'block';
+            selectCiudad.innerHTML = '<option value="" disabled selected>Cargando ciudades...</option>';
+
+            d3.json(ESTADOS_PROVINCIAS_URL).then(data => {
+                const ciudades = data.features
+                    .filter(f => provinciaPerteneceAPais(f, nombrePais, idPaisEscala))
+
+                    .map(f => f.properties.name || f.properties.name_en || "")
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b));
+
+                const unicas = [...new Set(ciudades)];
+                if (unicas.length === 0) {
+                    selectCiudad.innerHTML = '<option value="" disabled selected>No encontramos ciudades para este país</option>';
+                    return;
+                }
+
+                selectCiudad.innerHTML = '<option value="" disabled selected>Selecciona una ciudad...</option>';
+                unicas.forEach(ciudad => {
+                    const opt = document.createElement('option');
+                    opt.value = ciudad;
+                    opt.textContent = ciudad;
+                    selectCiudad.appendChild(opt);
+                });
+            }).catch(() => {
+                selectCiudad.innerHTML = '<option value="" disabled selected>No se pudieron cargar ciudades</option>';
+            });
+        };
 
         window.borrarItinerarioCompleto = function(idPais) {
             const btn = document.getElementById('btn-borrar-iti');
@@ -1571,9 +1718,9 @@ d3.select("#opc-prov-visitado").on("click",function(){
             if (tipo === 'viaje') {
                 const paisesMapa = d3.selectAll('.pais').data();
                 const paisesSelect = paisesMapa
-                    .map(d => d.properties.name)
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(name => `<option value="${name}">${name}</option>`)
+                    .map(d => ({ id: d.id, nombre: d.properties.name }))
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                    .map(p => `<option value="${p.id}">${p.nombre}</option>` )
                     .join('');
 
                 formHTML += `
@@ -1581,7 +1728,10 @@ d3.select("#opc-prov-visitado").on("click",function(){
                         <select id="input-viaje-medio"><option value="Micro">🚌 Micro / Autobús</option><option value="Auto">🚗 Auto / Alquiler</option><option value="Avión">✈️ Avión</option><option value="Tren">🚂 Tren</option></select>
                     </div>
                     <div class="campo-form"><label>País de Escala</label>
-                        <select id="input-viaje-destino"><option value="" disabled selected>Selecciona un país...</option>${paisesSelect}</select>
+                        <select id="input-viaje-destino" onchange="cargarCiudadesEscalaViaje()"><option value="" disabled selected>Selecciona un país...</option>${paisesSelect}</select>
+                    </div>
+                    <div class="campo-form" id="campo-viaje-ciudad" style="display:none;"><label>Ciudad de Escala</label>
+                        <select id="input-viaje-ciudad"><option value="" disabled selected>Selecciona una ciudad...</option></select>
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <div class="campo-form" style="flex: 1;"><label>Horas</label><input type="number" id="input-viaje-horas" placeholder="0"></div>
@@ -1626,17 +1776,29 @@ d3.select("#opc-prov-visitado").on("click",function(){
             const dataPais = destinosSonados[idPais];
             if (!dataPais.destinoFinal) dataPais.destinoFinal = dataPais.nombre;
             if (!dataPais.escalas) dataPais.escalas = [];
+            if (!dataPais.escalasCiudades) dataPais.escalasCiudades = [];
 
             if (tipo === 'viaje') {
                 nuevoItem.medio = document.getElementById('input-viaje-medio').value;
-                const escalaValor = document.getElementById('input-viaje-destino').value;
-                nuevoItem.destino = escalaValor;
+                const selectPaisEscala = document.getElementById('input-viaje-destino');
+                const escalaId = selectPaisEscala.value;
+                const escalaNombre = selectPaisEscala.options[selectPaisEscala.selectedIndex]?.text || '';
+                const selectCiudadEscala = document.getElementById('input-viaje-ciudad');
+                const ciudadEscala = selectCiudadEscala ? (selectCiudadEscala.value || '') : '';
+                nuevoItem.destino = escalaNombre;
+                nuevoItem.destinoId = escalaId;
+                nuevoItem.ciudad = ciudadEscala;
                 nuevoItem.horas = document.getElementById('input-viaje-horas').value || '0';
                 nuevoItem.minutos = document.getElementById('input-viaje-minutos').value || '0';
                 nuevoItem.costo = document.getElementById('input-viaje-costo').value || '0';
-                const escN = escalaValor ? escalaValor.toUpperCase() : "";
+                const escN = escalaNombre ? escalaNombre.toUpperCase() : "";
                 if (escN && escN !== dataPais.destinoFinal.toUpperCase() && !dataPais.escalas.includes(escN)) {
                     dataPais.escalas.push(escN);
+                }
+                if (ciudadEscala) {
+                    const ciudadNormalizada = ciudadEscala.toUpperCase();
+                    if (!dataPais.escalasCiudades.includes(ciudadNormalizada)) dataPais.escalasCiudades.push(ciudadNormalizada);
+                    dataPais.ciudadDestinoFinal = ciudadNormalizada;
                 }
             } else if (tipo === 'hospedaje') {
                 nuevoItem.hotel = document.getElementById('input-hospedaje-nombre').value || 'Alojamiento';
@@ -1674,7 +1836,7 @@ d3.select("#opc-prov-visitado").on("click",function(){
             }
             items.forEach(item => {
                 let icono = 'circle'; let titulo = ''; let detalles = '';
-                if (item.tipo === 'viaje') { icono = 'bus'; titulo = `Viaje en ${item.medio}`; detalles = `Escala: ${item.destino}<br>Costo: $${item.costo}`; }
+                if (item.tipo === 'viaje') { icono = 'bus'; titulo = `Viaje en ${item.medio}`; detalles = `Escala: ${item.destino}${item.ciudad ? `, ${item.ciudad}` : ''}<br>Costo: $${item.costo}`; }
                 else if (item.tipo === 'hospedaje') { icono = 'hotel'; titulo = item.hotel; detalles = `${item.noches} noches - Total: $${item.costo}`; }
                 else if (item.tipo === 'aventura') { icono = 'mountain'; titulo = item.lugar; detalles = `Día: ${item.dia} ($${item.costo})<br>${item.llegada || ''} - ${item.partida || ''}`; }
                 else if (item.tipo === 'restaurante') { icono = 'utensils'; titulo = item.plato; detalles = `Gasto: $${item.precio}`; }
