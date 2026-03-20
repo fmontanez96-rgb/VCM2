@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -817,7 +818,7 @@
                 idsPaises.forEach(id => {
                     const pais = destinosSonados[id];
                     const numItems = pais.itinerario.length;
- const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
+                    const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
                     listaHTML.innerHTML += `
                         <div class="tarjeta-pais">
                             <div class="info-pais">
@@ -830,6 +831,8 @@
                 scrollArea.appendChild(listaHTML);
             }
             lucide.createIcons();
+        }
+
         window.renderizarPantallaRecuerdos = function() {
             const contenedor = document.getElementById('vista-vividas');
             const idsPaises = Object.keys(paisesVisitados);
