@@ -817,48 +817,19 @@
                 idsPaises.forEach(id => {
                     const pais = destinosSonados[id];
                     const numItems = pais.itinerario.length;
-function obtenerNombreCabeceraDestino(pais) {
-    if (!pais.itinerario || pais.itinerario.length === 0) return '';
-
-    // Último destino = destino final
-    const destinoFinal = pais.itinerario[pais.itinerario.length - 1];
-
-    const nombreFinal = destinoFinal.ciudad + ', ' + destinoFinal.pais;
-
-    // Escalas = todo menos el último
-    const escalas = pais.itinerario.slice(0, -1);
-
-    if (escalas.length === 0) {
-        return `<span style="color:#E91E63; font-weight:800;">${nombreFinal}</span>`;
-    }
-
-    // Agrupar por país
-    const mapaPaises = {};
-
-    escalas.forEach(e => {
-        if (!mapaPaises[e.pais]) {
-            mapaPaises[e.pais] = [];
-        }
-        mapaPaises[e.pais].push(e.ciudad);
-    });
-
-    const escalasFormateadas = Object.entries(mapaPaises).map(([pais, ciudades]) => {
-        // Si hay más de una ciudad → solo país
-        if (ciudades.length > 1) {
-            return pais;
-        }
-        // Si hay una sola → ciudad
-        return ciudades[0];
-    });
-
-    const textoEscalas = escalasFormateadas.join(', ');
-
-    return `
-        <span style="color:#E91E63; font-weight:800;">${nombreFinal}</span>
-        <span style="color:#9E9E9E; font-size:0.85em;"> (${textoEscalas})</span>
-    `;
-}                    
-
+ const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
+                    listaHTML.innerHTML += `
+                        <div class="tarjeta-pais">
+                            <div class="info-pais">
+                                <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
+                                <div><h3 class="nombre-pais-lista">${nombrePrincipal}</h3><span class="zonas-badge">${numItems} pasos</span></div>
+                            </div>
+                            <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
+                        </div>`;
+                });
+                scrollArea.appendChild(listaHTML);
+            }
+            lucide.createIcons();
         window.renderizarPantallaRecuerdos = function() {
             const contenedor = document.getElementById('vista-vividas');
             const idsPaises = Object.keys(paisesVisitados);
