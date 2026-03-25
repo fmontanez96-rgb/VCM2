@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitácora de Aventuras - Diario de Viajes</title>
+    <title>Nuestra Historia - Diario de Viajes</title>
 
     <!-- Librerías Externas -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -59,18 +59,16 @@
         .menu-lateral { display: flex; flex-direction: column; gap: 18px; }
 
         .btn-menu {
-            background: linear-gradient(135deg, #FFF8FA 0%, #FFFFFF 100%); border: 3px solid #F8BBD0; color: #D81B60;
+            background: #FFF8FA; border: 3px solid #F8BBD0; color: #D81B60;
             padding: 14px 20px; border-radius: 50px; cursor: pointer; text-align: left;
             display: flex; align-items: center; gap: 12px; 
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            font-family: 'Quicksand', sans-serif; font-size: 1.05rem; font-weight: 800;
-            position: relative;
-            overflow: hidden;
+            font-family: 'Quicksand', sans-serif; font-size: 1.05rem; font-weight: 700;
         }
         .btn-menu .menu-texto { display: flex; flex-direction: column; line-height: 1.1; }
         .btn-menu .menu-detalle { font-size: 0.72rem; letter-spacing: 0.2px; color: #ad1457; font-weight: 700; opacity: 0.85; margin-top: 4px; }
 
-        .btn-menu:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 10px 24px var(--btn-glow); border-color: var(--primary); }
+        .btn-menu:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 20px var(--btn-glow); border-color: var(--primary); }
         .btn-menu.activo { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 25px var(--btn-glow), 0 8px 15px rgba(255, 64, 129, 0.3); transform: translateY(-2px); }
         .btn-menu.activo .menu-detalle { color: #ffe8f2; }
         .sidebar-resumen {
@@ -378,7 +376,7 @@
         <aside class="sidebar">
             <div class="logo-titulo">
                 <i data-lucide="sparkles" class="icono-magia"></i>
-                <h1>Bitácora<br>de Aventuras</h1>
+                <h1>Nuestra<br>Historia</h1>
             </div>
             <p class="logo-subtitulo">Tu diario de viajes, con momentos y rutas soñadas.</p>
             <nav class="menu-lateral">
@@ -454,31 +452,6 @@ const firebaseConfig = {
         let intervaloAutosave = null;
         const RUTA_ESTADO_FIREBASE = "nuestraHistoria/estadoCompartido";
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
-        const ATRACCIONES_FAMOSAS = {
-            france: ["Torre Eiffel", "Arco del Triunfo", "Museo del Louvre"],
-            spain: ["Sagrada Familia", "Alhambra de Granada", "Parque Güell"],
-            italy: ["Coliseo Romano", "Torre de Pisa", "Canales de Venecia"],
-            germany: ["Puerta de Brandeburgo", "Castillo de Neuschwanstein", "Catedral de Colonia"],
-            "united kingdom": ["Big Ben", "London Eye", "Stonehenge"],
-            portugal: ["Torre de Belém", "Palacio da Pena", "Librería Lello"],
-            "united states": ["Estatua de la Libertad", "Gran Cañón", "Times Square"],
-            canada: ["Cataratas del Niágara", "Parque Banff", "Torre CN"],
-            mexico: ["Chichén Itzá", "Teotihuacán", "Cenotes de Yucatán"],
-            brazil: ["Cristo Redentor", "Pan de Azúcar", "Cataratas del Iguazú"],
-            argentina: ["Glaciar Perito Moreno", "Cataratas del Iguazú", "Obelisco de Buenos Aires"],
-            peru: ["Machu Picchu", "Líneas de Nazca", "Montaña de 7 colores"],
-            colombia: ["Cartagena amurallada", "Parque Tayrona", "Piedra del Peñol"],
-            japan: ["Monte Fuji", "Templo Senso-ji", "Cruce de Shibuya"],
-            china: ["Gran Muralla China", "Ciudad Prohibida", "Guerreros de Terracota"],
-            india: ["Taj Mahal", "Fuerte Amber", "Puerta de la India"],
-            thailand: ["Gran Palacio de Bangkok", "Phi Phi Islands", "Templo Wat Arun"],
-            australia: ["Ópera de Sídney", "Gran Barrera de Coral", "Uluru"],
-            "new zealand": ["Milford Sound", "Hobbiton", "Monte Cook"],
-            egypt: ["Pirámides de Giza", "Templo de Karnak", "Valle de los Reyes"],
-            turkey: ["Santa Sofía", "Capadocia", "Pamukkale"],
-            greece: ["Acrópolis de Atenas", "Santorini", "Meteora"],
-            "south africa": ["Table Mountain", "Parque Kruger", "Cabo de Buena Esperanza"]
-        };
 
         function obtenerEstadoActual() {
             return {
@@ -523,38 +496,6 @@ const firebaseConfig = {
                 destino.ciudadDestinoFinal = destino.ciudadDestinoFinal || "";
                 destino.portadaUrl = destino.portadaUrl || "";
             });
-        }
-
-        function obtenerAtraccionesFamosas(nombrePais) {
-            const clave = normalizarTextoMapa(nombrePais);
-            const alias = {
-                "francia": "france",
-                "espana": "spain",
-                "italia": "italy",
-                "alemania": "germany",
-                "reino unido": "united kingdom",
-                "estados unidos de america": "united states",
-                "estados unidos": "united states",
-                "eeuu": "united states",
-                "mexico": "mexico",
-                "brasil": "brazil",
-                "argentina": "argentina",
-                "peru": "peru",
-                "colombia": "colombia",
-                "japon": "japan",
-                "china": "china",
-                "india": "india",
-                "tailandia": "thailand",
-                "australia": "australia",
-                "nueva zelanda": "new zealand",
-                "egipto": "egypt",
-                "turquia": "turkey",
-                "grecia": "greece",
-                "sudafrica": "south africa"
-            };
-
-            const claveFinal = ATRACCIONES_FAMOSAS[clave] ? clave : (alias[clave] || clave);
-            return ATRACCIONES_FAMOSAS[claveFinal] || [];
         }
 
         function guardarEstadoEnFirebase(forzar = false) {
@@ -783,17 +724,6 @@ const firebaseConfig = {
                         const esVisitado = elementoPais.classed("visitado");
                         const esSonado = destinosSonados[idPais] ? true : false;
                         const colorTitulo = esVisitado ? "#00BCD4" : (esSonado ? "#FFB300" : "#FF4081"); 
-                        const atraccionesPais = obtenerAtraccionesFamosas(nombrePais);
-                        const atraccionesHTML = atraccionesPais.length > 0
-                            ? `
-                                <div class="atracciones-pais">
-                                    <h4><i data-lucide="landmark"></i> Lugares famosos</h4>
-                                    <ul>
-                                        ${atraccionesPais.map((item) => `<li>${item}</li>`).join("")}
-                                    </ul>
-                                </div>
-                              `
-                            : "";
 
                         // Menú Actualizado según instrucciones
                         menu.html(`
@@ -807,7 +737,6 @@ const firebaseConfig = {
                                 ${idPais && idPais !== "-99" ? `<li id="opc-planear"><i data-lucide="map"></i> Planear Aventura</li>` : ''}
                                 ${idPais && idPais !== "-99" ? `<li id="opc-explorar"><i data-lucide="search"></i> Explorar Zonas</li>` : ''}
                             </ul>
-                            ${atraccionesHTML}
                         `);
 
                         lucide.createIcons();
@@ -1162,10 +1091,7 @@ const firebaseConfig = {
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h2><i data-lucide="heart"></i> Próximas aventuras</h2>
-                        <p style="margin: 6px 0 0; color: #78909C; font-weight: 700;">Planea tu próximo viaje</p>
-                    </div>
+                    <h2><i data-lucide="heart"></i> Destinos por Vivir</h2>
                     <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoDestino()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);">
                         <i data-lucide="plus-circle"></i> Nueva Aventura
                     </button>
@@ -1870,10 +1796,7 @@ const firebaseConfig = {
 
             contenedor.innerHTML = `
                 <div class="encabezado-seccion" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h2><i data-lucide="heart"></i> Próximas aventuras</h2>
-                        <p style="margin: 6px 0 0; color: #78909C; font-weight: 700;">Planea tu próximo viaje</p>
-                    </div>
+                    <h2><i data-lucide="heart"></i> Destinos por Vivir</h2>
                     <button class="btn-nueva-aventura" onclick="mostrarSelectorNuevoDestino()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: inherit; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);">
                         <i data-lucide="plus-circle"></i> Nueva Aventura
                     </button>
