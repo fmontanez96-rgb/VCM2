@@ -8,6 +8,8 @@
     <!-- Librerías Externas -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet">
 
     <style>
@@ -53,6 +55,26 @@
         .icono-magia { color: #FFCA28; fill: #FFE082; }
 
         .menu-lateral { display: flex; flex-direction: column; gap: 18px; }
+        .panel-sync {
+            margin-top: auto;
+            background: #F5FCFF;
+            border: 2px dashed #B3E5FC;
+            border-radius: 18px;
+            padding: 12px;
+            font-size: 0.82rem;
+            color: #546E7A;
+            line-height: 1.35;
+        }
+        .panel-sync strong { color: #00ACC1; font-size: 0.88rem; }
+        .panel-sync code {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 3px 7px;
+            border-radius: 8px;
+            background: #E1F5FE;
+            font-weight: 700;
+            color: #007C91;
+        }
 
         .btn-menu {
             background: #FFF8FA; border: 3px solid #F8BBD0; color: #D81B60;
@@ -247,6 +269,11 @@
                     <i data-lucide="heart"></i> Destinos Soñados
                 </button>
             </nav>
+            <div class="panel-sync">
+                <strong>Sincronización</strong><br>
+                Estado: <span id="sync-status">iniciando...</span><br>
+                Álbum: <code id="sync-album-id">-</code>
+            </div>
         </aside>
 
         <main class="contenido-principal">
@@ -269,6 +296,161 @@
         let provinciasVisitadas = {}; 
         let destinosSonados = {}; 
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
+        const LOCAL_STORAGE_KEY = "nuestraHistoriaDataV2";
+        const LOCAL_STORAGE_ALBUM_KEY = "nuestraHistoriaAlbumId";
+        const FIREBASE_COLLECTION = "albumes";
+        const FIREBASE_CONFIG = {
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
+        let firestoreDb = null;
+        let firestoreDocRef = null;
+        let ultimoEstadoSerializado = "";
+        let aplicandoSnapshotRemoto = false;
+
+        function setEstadoSync(texto) {
+            const el = document.getElementById("sync-status");
+            if (el) el.textContent = texto;
+        }
+
+        function obtenerAlbumId() {
+            const params = new URLSearchParams(window.location.search);
+            const albumDesdeUrl = params.get("album");
+            if (albumDesdeUrl) {
+                localStorage.setItem(LOCAL_STORAGE_ALBUM_KEY, albumDesdeUrl);
+                return albumDesdeUrl;
+            }
+
+            const guardado = localStorage.getItem(LOCAL_STORAGE_ALBUM_KEY);
+            if (guardado) return guardado;
+
+            const nuevoId = `album-${Math.random().toString(36).slice(2, 10)}`;
+            localStorage.setItem(LOCAL_STORAGE_ALBUM_KEY, nuevoId);
+            params.set("album", nuevoId);
+            const nuevaUrl = `${window.location.pathname}?${params.toString()}`;
+            history.replaceState({}, "", nuevaUrl);
+            return nuevoId;
+        }
+
+        function serializarEstado() {
+            return {
+                version: 1,
+                updatedAt: Date.now(),
+                paisesVisitados,
+                provinciasVisitadas,
+                destinosSonados
+            };
+        }
+
+        function aplicarEstado(payload) {
+            if (!payload) return;
+            paisesVisitados = payload.paisesVisitados || {};
+            provinciasVisitadas = payload.provinciasVisitadas || {};
+            destinosSonados = payload.destinosSonados || {};
+        }
+
+        function refrescarDatosEnPantalla() {
+            d3.selectAll(".pais").classed("visitado", function(d) {
+                return !!paisesVisitados[d.id];
+            });
+            d3.selectAll(".pais").classed("sonado", function(d) {
+                return !!destinosSonados[d.id];
+            });
+            d3.selectAll(".provincia").attr("fill", function() {
+                const idPais = this.dataset.countryId;
+                const idProv = this.dataset.provinceId;
+                if (provinciasVisitadas[idPais] && provinciasVisitadas[idPais][idProv]) return "#FF0000";
+                if (destinosSonados[idPais] && destinosSonados[idPais].provincias && destinosSonados[idPais].provincias[idProv]) return "#FFB300";
+                return "#CFD8DC";
+            });
+
+            const pantallaActiva = document.querySelector(".pantalla-activa");
+            if (!pantallaActiva) return;
+            if (pantallaActiva.id === "vista-vividas") renderizarPantallaRecuerdos();
+            if (pantallaActiva.id === "vista-por-vivir") renderizarPantallaSonados();
+        }
+
+        async function guardarEstado(force = false) {
+            if (aplicandoSnapshotRemoto && !force) return;
+
+            const payload = serializarEstado();
+            const serializado = JSON.stringify(payload);
+            if (!force && serializado === ultimoEstadoSerializado) return;
+
+            localStorage.setItem(LOCAL_STORAGE_KEY, serializado);
+            ultimoEstadoSerializado = serializado;
+
+            if (firestoreDocRef) {
+                try {
+                    await firestoreDocRef.set(payload, { merge: true });
+                    setEstadoSync("guardado en Firebase");
+                } catch (err) {
+                    console.error(err);
+                    setEstadoSync("solo local (error Firebase)");
+                }
+            } else {
+                setEstadoSync("guardado local");
+            }
+        }
+
+        async function inicializarPersistencia() {
+            const albumId = obtenerAlbumId();
+            const albumLabel = document.getElementById("sync-album-id");
+            if (albumLabel) albumLabel.textContent = albumId;
+
+            const localRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (localRaw) {
+                try {
+                    const localData = JSON.parse(localRaw);
+                    aplicarEstado(localData);
+                    ultimoEstadoSerializado = JSON.stringify(localData);
+                } catch (err) {
+                    console.error("No se pudo leer localStorage:", err);
+                }
+            }
+
+            const configCompleta = Object.values(FIREBASE_CONFIG).every(Boolean);
+            if (!configCompleta) {
+                setEstadoSync("falta configurar Firebase");
+                return;
+            }
+
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+                firestoreDb = firebase.firestore();
+                firestoreDocRef = firestoreDb.collection(FIREBASE_COLLECTION).doc(albumId);
+
+                firestoreDocRef.onSnapshot((snap) => {
+                    const remoto = snap.data();
+                    if (!remoto) return;
+
+                    const localActual = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    const local = localActual ? JSON.parse(localActual) : null;
+                    const remotoEsMasNuevo = !local || (remoto.updatedAt || 0) > (local.updatedAt || 0);
+                    if (remotoEsMasNuevo) {
+                        aplicandoSnapshotRemoto = true;
+                        aplicarEstado(remoto);
+                        ultimoEstadoSerializado = JSON.stringify(remoto);
+                        localStorage.setItem(LOCAL_STORAGE_KEY, ultimoEstadoSerializado);
+                        refrescarDatosEnPantalla();
+                        aplicandoSnapshotRemoto = false;
+                    }
+                    setEstadoSync("sincronizado");
+                }, (err) => {
+                    console.error(err);
+                    setEstadoSync("solo local (sin snapshot)");
+                });
+
+                await guardarEstado(true);
+            } catch (err) {
+                console.error(err);
+                setEstadoSync("solo local (falló conexión)");
+            }
+        }
 
         function manejarErrorMapaDetallado(err) {
             const mensaje = `No se pudo cargar ${ESTADOS_PROVINCIAS_URL}. Verifica tu conexión a internet y CORS.`;
@@ -1849,7 +2031,12 @@
             });
             lucide.createIcons();
         };
-        document.addEventListener("DOMContentLoaded", cargarMapa);
+        document.addEventListener("DOMContentLoaded", async () => {
+            await inicializarPersistencia();
+            cargarMapa();
+            setInterval(() => { guardarEstado(); }, 1500);
+        });
+        window.addEventListener("beforeunload", () => { guardarEstado(true); });
     </script>
 </body>
 </html>
