@@ -362,6 +362,56 @@ const firebaseConfig = {
         let intervaloAutosave = null;
         const RUTA_ESTADO_FIREBASE = "nuestraHistoria/estadoCompartido";
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
+        let visorMultimediaEstado = null;
+        let visorMultimediaElementos = null;
+        let visorMultimediaHandlerTeclado = null;
+
+        function obtenerItemsAlbumMultimedia(idPais, idProvincia, albumIndex) {
+            const objDestino = idProvincia ? provinciasVisitadas[idPais]?.[idProvincia] : paisesVisitados[idPais];
+            const album = objDestino?.albumes?.[albumIndex];
+            return {
+                album,
+                items: Array.isArray(album?.items) ? album.items : []
+            };
+        }
+
+        function renderizarItemVisorMultimedia() {
+            if (!visorMultimediaEstado || !visorMultimediaElementos) return;
+            const { album, items } = obtenerItemsAlbumMultimedia(
+                visorMultimediaEstado.idPais,
+                visorMultimediaEstado.idProvincia,
+                visorMultimediaEstado.albumIndex
+            );
+            if (!items.length) {
+                cerrarVisorMultimedia();
+                return;
+            }
+
+            if (visorMultimediaEstado.itemIndex >= items.length) visorMultimediaEstado.itemIndex = items.length - 1;
+            if (visorMultimediaEstado.itemIndex < 0) visorMultimediaEstado.itemIndex = 0;
+
+            const item = items[visorMultimediaEstado.itemIndex];
+            const esVideo = item?.tipo === 'video';
+            const mediaSrc = item?.urlReproduccion || item?.urlVista || item?.miniatura || '';
+
+            visorMultimediaElementos.contador.textContent = `${visorMultimediaEstado.itemIndex + 1} / ${items.length}`;
+            visorMultimediaElementos.titulo.textContent = album?.nombre || 'Álbum';
+            visorMultimediaElementos.contenido.innerHTML = '';
+
+            const media = document.createElement(esVideo ? 'video' : 'img');
+            media.style.maxWidth = '100%';
+            media.style.maxHeight = '70vh';
+            media.style.borderRadius = '12px';
+            media.style.objectFit = 'contain';
+            media.style.background = '#000';
+            media.src = mediaSrc;
+            media.alt = item?.nombre || 'Multimedia';
+            if (esVideo) {
+                media.controls = true;
+                media.autoplay = true;
+            }
+            visorMultimediaElementos.contenido.appendChild(media);
+        }
 
         function obtenerEstadoActual() {
             return {
@@ -1494,7 +1544,7 @@ const firebaseConfig = {
                                         type="button"
                                         class="album-thumb-card"
                                         title="${item?.nombre || `Elemento ${itemIndex + 1}`}"
-                                        onclick="abrirVisorAlbumDrive('${idPais}', ${paramProv}, ${index}, ${itemIndex})"
+                                        onclick="abrirVisorMultimedia('${idPais}', ${paramProv}, ${index}, ${itemIndex})"
                                     >
                                         <img src="${item?.miniatura || ''}" alt="${item?.nombre || `Multimedia ${itemIndex + 1}`}">
                                         <span class="album-thumb-type-badge">${item?.tipo === 'video' ? 'VIDEO' : 'FOTO'}</span>
@@ -1549,31 +1599,107 @@ const firebaseConfig = {
             await window.cargarArchivosDriveDeAlbum(album, idPais, idProvincia);
         };
 
-        window.abrirVisorAlbumDrive = function(idPais, idProvincia = null, indexAlbum, indexItem) {
-            const objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            const album = objDestino?.albumes?.[indexAlbum];
-            const items = Array.isArray(album?.items) ? album.items : [];
-            const item = items[indexItem];
-            if (!item) return;
+        window.abrirVisorMultimedia = function(idPais, idProvincia = null, albumIndex, itemIndex) {
+            cerrarVisorMultimedia();
+            const { items } = obtenerItemsAlbumMultimedia(idPais, idProvincia, albumIndex);
+            if (!items[itemIndex]) return;
 
-            const esVideo = item.tipo === 'video';
-            const contenido = esVideo
-                ? `<video src="${item.urlReproduccion || item.urlVista}" controls autoplay style="max-width:100%; max-height:70vh; border-radius:12px; background:#000;"></video>`
-                : `<img src="${item.urlReproduccion || item.urlVista || item.miniatura}" alt="${item.nombre || 'Multimedia'}" style="max-width:100%; max-height:70vh; border-radius:12px; object-fit:contain; background:#000;">`;
+            visorMultimediaEstado = { idPais, idProvincia, albumIndex, itemIndex };
 
-            const modal = document.createElement('div');
-            modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px;";
-            modal.innerHTML = `
-                <div style="background:#111827; width:100%; max-width:960px; border-radius:18px; overflow:hidden; position:relative; padding:20px; color:#fff;">
-                    <button onclick="this.closest('.modal-drive-viewer').remove()" style="position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.2); color:white; border:none; border-radius:50%; width:34px; height:34px; cursor:pointer; font-weight:bold; z-index:10;">✕</button>
-                    <div style="font-size:0.8rem; color:#E5E7EB; margin-bottom:12px;">${album?.nombre || 'Álbum'} · ${indexItem + 1} / ${items.length}</div>
-                    <div style="display:flex; justify-content:center; align-items:center;">${contenido}</div>
-                </div>`;
-            modal.className = 'modal-drive-viewer';
-            modal.addEventListener('click', (event) => {
-                if (event.target === modal) modal.remove();
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(0,0,0,0.82)';
+            overlay.style.zIndex = '2500';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.padding = '20px';
+
+            const contenedor = document.createElement('div');
+            contenedor.style.background = '#111827';
+            contenedor.style.width = '100%';
+            contenedor.style.maxWidth = '960px';
+            contenedor.style.borderRadius = '18px';
+            contenedor.style.overflow = 'hidden';
+            contenedor.style.position = 'relative';
+            contenedor.style.padding = '20px 70px';
+            contenedor.style.color = '#fff';
+
+            const btnCerrar = document.createElement('button');
+            btnCerrar.type = 'button';
+            btnCerrar.textContent = '✕';
+            btnCerrar.style.cssText = 'position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-weight:bold;z-index:3;';
+            btnCerrar.addEventListener('click', cerrarVisorMultimedia);
+
+            const btnIzquierda = document.createElement('button');
+            btnIzquierda.type = 'button';
+            btnIzquierda.textContent = '❮';
+            btnIzquierda.style.cssText = 'position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:42px;height:42px;cursor:pointer;font-size:1.2rem;z-index:2;';
+            btnIzquierda.addEventListener('click', () => mostrarItemVisor(-1));
+
+            const btnDerecha = document.createElement('button');
+            btnDerecha.type = 'button';
+            btnDerecha.textContent = '❯';
+            btnDerecha.style.cssText = 'position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:42px;height:42px;cursor:pointer;font-size:1.2rem;z-index:2;';
+            btnDerecha.addEventListener('click', () => mostrarItemVisor(1));
+
+            const titulo = document.createElement('div');
+            titulo.style.cssText = 'font-size:0.8rem;color:#E5E7EB;margin-bottom:4px;';
+
+            const contador = document.createElement('div');
+            contador.style.cssText = 'font-size:0.85rem;color:#D1D5DB;margin-bottom:12px;';
+
+            const contenido = document.createElement('div');
+            contenido.style.display = 'flex';
+            contenido.style.justifyContent = 'center';
+            contenido.style.alignItems = 'center';
+            contenido.style.minHeight = '220px';
+
+            contenedor.append(btnCerrar, btnIzquierda, btnDerecha, titulo, contador, contenido);
+            overlay.appendChild(contenedor);
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) cerrarVisorMultimedia();
             });
-            document.body.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            visorMultimediaElementos = { overlay, contenido, contador, titulo };
+            visorMultimediaHandlerTeclado = (event) => {
+                if (event.key === 'Escape') cerrarVisorMultimedia();
+                if (event.key === 'ArrowLeft') mostrarItemVisor(-1);
+                if (event.key === 'ArrowRight') mostrarItemVisor(1);
+            };
+            document.addEventListener('keydown', visorMultimediaHandlerTeclado);
+            renderizarItemVisorMultimedia();
+        };
+
+        window.mostrarItemVisor = function(delta) {
+            if (!visorMultimediaEstado) return;
+            const { items } = obtenerItemsAlbumMultimedia(
+                visorMultimediaEstado.idPais,
+                visorMultimediaEstado.idProvincia,
+                visorMultimediaEstado.albumIndex
+            );
+            if (!items.length) return;
+            const total = items.length;
+            visorMultimediaEstado.itemIndex = (visorMultimediaEstado.itemIndex + delta + total) % total;
+            renderizarItemVisorMultimedia();
+        };
+
+        window.cerrarVisorMultimedia = function() {
+            if (visorMultimediaHandlerTeclado) {
+                document.removeEventListener('keydown', visorMultimediaHandlerTeclado);
+                visorMultimediaHandlerTeclado = null;
+            }
+            if (visorMultimediaElementos?.overlay?.parentNode) {
+                visorMultimediaElementos.overlay.parentNode.removeChild(visorMultimediaElementos.overlay);
+            }
+            visorMultimediaEstado = null;
+            visorMultimediaElementos = null;
+        };
+
+        window.abrirVisorAlbumDrive = function(idPais, idProvincia = null, indexAlbum, indexItem) {
+            window.abrirVisorMultimedia(idPais, idProvincia, indexAlbum, indexItem);
         };
 
         window.cargarArchivosDriveDeAlbum = async function(album, idPais, idProvincia = null) {
