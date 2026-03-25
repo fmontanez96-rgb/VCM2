@@ -1407,6 +1407,11 @@ const firebaseConfig = {
                         const nombreAlbum = album?.nombre || 'Álbum sin nombre';
                         const urlCarpeta = album?.urlCarpeta || album?.url || '#';
                         const itemsAlbum = Array.isArray(album?.items) ? album.items : [];
+                        const errorCarga = album?.errorCarga || '';
+                        const estadoCarga = album?.cargando ? '<p style="margin:10px 0 0; font-size:0.75rem; color:#0288D1;">Cargando archivos...</p>' : '';
+                        const mensajeError = errorCarga
+                            ? `<p style="margin:10px 0 0; font-size:0.75rem; color:#D32F2F; background:#FFEBEE; padding:8px; border-radius:8px;">⚠️ ${errorCarga}</p>`
+                            : '';
                         contenedor.innerHTML += `
                             <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 5px solid var(--secondary);">
                                 <div style="padding: 15px;">
@@ -1415,6 +1420,8 @@ const firebaseConfig = {
                                         <button onclick="eliminarMemoria('${idPais}', ${paramProv}, ${index}, 'drive')" style="background:none; border:none; color: #EF5350; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
                                     </div>
                                     <p style="margin:10px 0 0; font-size:0.75rem; color:#78909C;">${itemsAlbum.length} archivo(s)</p>
+                                    ${estadoCarga}
+                                    ${mensajeError}
                                     <a href="${urlCarpeta}" target="_blank" style="display:block; margin-top:15px; text-align:center; background:#DB4437; color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.8rem;">ABRIR DRIVE</a>
                                 </div>
                             </div>`;
@@ -1442,6 +1449,78 @@ const firebaseConfig = {
                 }
             }
             lucide.createIcons();
+        };
+
+        window.cargarArchivosDriveDeAlbum = async function(album, idPais, idProvincia = null) {
+            const folderMatch = (album?.urlCarpeta || '').match(/\/folders\/([a-zA-Z0-9_-]+)|[?&]id=([a-zA-Z0-9_-]+)/);
+            const folderId = folderMatch?.[1] || folderMatch?.[2] || null;
+
+            if (!folderId) {
+                album.errorCarga = 'No se pudo leer el ID de carpeta desde el enlace de Drive.';
+                album.items = [];
+                album.cargando = false;
+                actualizarVistaAlbumes(idPais, idProvincia, 'drive');
+                return;
+            }
+
+            try {
+                album.cargando = true;
+                album.errorCarga = null;
+                actualizarVistaAlbumes(idPais, idProvincia, 'drive');
+
+                const endpointBackend = window.DRIVE_FILES_ENDPOINT || '';
+                const googleApiKey = window.GOOGLE_API_KEY || '';
+                let response;
+
+                if (endpointBackend) {
+                    const joiner = endpointBackend.includes('?') ? '&' : '?';
+                    response = await fetch(`${endpointBackend}${joiner}folderId=${encodeURIComponent(folderId)}`);
+                } else if (googleApiKey) {
+                    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+                    const fields = encodeURIComponent('files(id,name,mimeType,thumbnailLink,webViewLink,webContentLink),nextPageToken');
+                    const driveUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&key=${googleApiKey}&pageSize=200`;
+                    response = await fetch(driveUrl);
+                } else {
+                    throw new Error('Configura window.DRIVE_FILES_ENDPOINT o window.GOOGLE_API_KEY para consultar archivos de Drive.');
+                }
+
+                if (!response.ok) {
+                    throw new Error('No se pudo leer la carpeta. Verifica que sea pública o que el endpoint tenga permisos.');
+                }
+
+                const data = await response.json();
+                const files = Array.isArray(data?.files) ? data.files : [];
+
+                const media = files.filter((f) =>
+                    typeof f?.mimeType === 'string' && (f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
+                );
+
+                album.items = media.map((f) => {
+                    const esVideo = f.mimeType.startsWith('video/');
+                    return {
+                        id: f.id,
+                        nombre: f.name,
+                        tipo: esVideo ? 'video' : 'imagen',
+                        mimeType: f.mimeType,
+                        miniatura: f.thumbnailLink || `https://drive.google.com/thumbnail?id=${f.id}&sz=w600`,
+                        urlVista: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
+                        urlReproduccion: esVideo
+                            ? (f.webContentLink || `https://drive.google.com/uc?export=download&id=${f.id}`)
+                            : (f.webContentLink || `https://drive.google.com/uc?export=view&id=${f.id}`)
+                    };
+                });
+
+                album.errorCarga = album.items.length === 0 ? 'La carpeta no tiene imágenes o videos visibles.' : null;
+            } catch (error) {
+                console.error('Error cargando archivos de Drive:', error);
+                album.items = [];
+                album.errorCarga = error?.message || 'Falló la carga de archivos de Drive.';
+            } finally {
+                album.cargando = false;
+                const objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
+                objDestino.albumes = (objDestino.albumes || []).map((a) => (a.id === album.id ? album : a));
+                actualizarVistaAlbumes(idPais, idProvincia, 'drive');
+            }
         };
 
         window.agregarHistoria = function(idPais, idProvincia = null) {
@@ -1487,20 +1566,24 @@ const firebaseConfig = {
             }
         };
 
-        window.agregarCarpetaDrive = function(idPais, idProvincia = null) {
+        window.agregarCarpetaDrive = async function(idPais, idProvincia = null) {
             const nombre = document.getElementById('nombre-carpeta-drive').value.trim();
             const urlCarpeta = document.getElementById('url-carpeta-drive').value.trim();
             if (!nombre || !urlCarpeta) { alert("Faltan datos."); return; }
             if (!urlCarpeta.includes('drive.google.com')) { alert("Link no válido."); return; }
 
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            objDestino.albumes.push({
+            const nuevoAlbum = {
                 id: `alb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                 nombre,
                 urlCarpeta,
-                items: []
-            });
+                items: [],
+                cargando: true,
+                errorCarga: null
+            };
+            objDestino.albumes.push(nuevoAlbum);
             actualizarVistaAlbumes(idPais, idProvincia, 'drive');
+            await window.cargarArchivosDriveDeAlbum(nuevoAlbum, idPais, idProvincia);
         };
 
         // Redirigimos la función huérfana para evitar errores con código viejo que tenías debajo
