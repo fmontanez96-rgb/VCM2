@@ -52,9 +52,9 @@
         }
 
         .logo-titulo { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--primary); margin-bottom: 6px; }
-        .logo-titulo h1 { font-size: 1.35rem; margin: 0; font-weight: 900; text-align: center; line-height: 1.15; letter-spacing: 0.3px; }
+        .logo-titulo h1 { font-size: 1.6rem; margin: 0; font-weight: 900; text-align: center; }
         .icono-magia { color: #FFCA28; fill: #FFE082; }
-        .logo-subtitulo { margin: 0 0 24px; text-align: center; font-size: 0.88rem; font-weight: 700; color: #78909C; }
+        .logo-subtitulo { margin: 0 0 24px; text-align: center; font-size: 0.92rem; font-weight: 700; color: #78909C; }
 
         .menu-lateral { display: flex; flex-direction: column; gap: 18px; }
 
@@ -67,24 +67,22 @@
             position: relative;
             overflow: hidden;
         }
-        .btn-menu::after {
-            content: "→";
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #f06292;
-            font-size: 1rem;
-            font-weight: 900;
-            opacity: 0.6;
-        }
-        .btn-menu .menu-texto { display: flex; flex-direction: column; line-height: 1.1; padding-right: 22px; }
+        .btn-menu .menu-texto { display: flex; flex-direction: column; line-height: 1.1; }
         .btn-menu .menu-detalle { font-size: 0.72rem; letter-spacing: 0.2px; color: #ad1457; font-weight: 700; opacity: 0.85; margin-top: 4px; }
 
         .btn-menu:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 10px 24px var(--btn-glow); border-color: var(--primary); }
         .btn-menu.activo { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 25px var(--btn-glow), 0 8px 15px rgba(255, 64, 129, 0.3); transform: translateY(-2px); }
         .btn-menu.activo .menu-detalle { color: #ffe8f2; }
-        .btn-menu.activo::after { color: #fff; opacity: 0.95; }
+        .sidebar-resumen {
+            margin-top: auto;
+            background: #ffffff;
+            border: 2px dashed #B3E5FC;
+            border-radius: 22px;
+            padding: 14px;
+            box-shadow: 0 8px 18px rgba(0, 188, 212, 0.12);
+        }
+        .sidebar-resumen h3 { margin: 0 0 8px; font-size: 0.92rem; color: #0288D1; letter-spacing: 0.3px; text-transform: uppercase; }
+        .sidebar-resumen p { margin: 0; font-size: 0.84rem; color: #607D8B; font-weight: 700; }
 
         .contenido-principal {
             flex-grow: 1; position: relative; display: flex; flex-direction: column;
@@ -110,28 +108,36 @@
         }
         #mapa-svg { width: 100%; height: 100%; cursor: grab; }
         #mapa-svg:active { cursor: grabbing; }
-        .atracciones-pais {
-            margin-top: 12px;
-            border-top: 2px dashed #F8BBD0;
-            padding-top: 10px;
+        .encabezado-explora {
+            position: absolute;
+            top: 16px;
+            left: 18px;
+            z-index: 15;
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.93);
+            border: 2px solid #b2ebf2;
+            border-radius: 24px;
+            padding: 14px 16px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 24px rgba(0, 188, 212, 0.2);
         }
-        .atracciones-pais h4 {
-            margin: 0 0 8px;
-            color: #FF4081;
-            font-size: 0.95rem;
-            font-weight: 900;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .atracciones-pais ul {
+        .encabezado-explora h2 {
             margin: 0;
-            padding-left: 18px;
-            color: #546E7A;
-            font-size: 0.9rem;
-            font-weight: 700;
-            display: grid;
-            gap: 5px;
+            font-size: 1.65rem;
+            text-shadow: 1px 1px 0 #b3e5fc;
+            color: #EC407A;
+        }
+        .encabezado-explora p { margin: 8px 0 12px; color: #607D8B; font-size: 0.92rem; font-weight: 700; }
+        .chips-explora { display: flex; gap: 8px; flex-wrap: wrap; }
+        .chip-explora {
+            background: #E1F5FE;
+            border: 1px solid #80DEEA;
+            color: #006064;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.25px;
         }
 
         .mapa-adorno-nube { fill: rgba(255, 255, 255, 0.62); animation: nubeFlotante 9s ease-in-out infinite; }
@@ -374,34 +380,47 @@
                 <i data-lucide="sparkles" class="icono-magia"></i>
                 <h1>Bitácora<br>de Aventuras</h1>
             </div>
-            <p class="logo-subtitulo">Rutas inolvidables, recuerdos únicos y planes por descubrir.</p>
+            <p class="logo-subtitulo">Tu diario de viajes, con momentos y rutas soñadas.</p>
             <nav class="menu-lateral">
                 <button class="btn-menu activo" data-target="vista-explora" onclick="irAPantalla('vista-explora')">
                     <i data-lucide="globe"></i>
                     <span class="menu-texto">
-                        Explorar mapa
-                        <span class="menu-detalle">Descubre países y lugares icónicos</span>
+                        Mundo Entero
+                        <span class="menu-detalle">Explora países y provincias</span>
                     </span>
                 </button>
                 <button class="btn-menu" data-target="vista-vividas" onclick="irAPantalla('vista-vividas')">
                     <i data-lucide="camera"></i>
                     <span class="menu-texto">
                         Recuerdos
-                        <span class="menu-detalle">Experiencias que ya viviste</span>
+                        <span class="menu-detalle">Experiencias ya vividas</span>
                     </span>
                 </button>
                 <button class="btn-menu" data-target="vista-por-vivir" onclick="irAPantalla('vista-por-vivir')">
                     <i data-lucide="heart"></i>
                     <span class="menu-texto">
-                        Próximas aventuras
-                        <span class="menu-detalle">Planea tu próximo viaje</span>
+                        Destinos Soñados
+                        <span class="menu-detalle">Próximas aventuras</span>
                     </span>
                 </button>
             </nav>
+            <div class="sidebar-resumen">
+                <h3>Estado del viaje</h3>
+                <p>Marca destinos, crea itinerarios y guarda cada detalle de tu aventura.</p>
+            </div>
         </aside>
 
         <main class="contenido-principal">
             <div id="vista-explora" class="pantalla pantalla-activa">
+                <div class="encabezado-explora">
+                    <h2><i data-lucide="map-pinned"></i> Panel de Exploración</h2>
+                    <p>Haz clic en cualquier país para abrir su menú rápido, marcarlo como visitado o guardarlo como destino soñado.</p>
+                    <div class="chips-explora">
+                        <span class="chip-explora">Vista global interactiva</span>
+                        <span class="chip-explora">Seguimiento por provincias</span>
+                        <span class="chip-explora">Detalles con un clic</span>
+                    </div>
+                </div>
                 <div id="world-map"></div>
                 <div id="tooltip" class="tooltip-oculto"><span id="tooltip-nombre"></span></div>
                 <div id="menu-contextual" class="menu-oculto"></div>
