@@ -366,6 +366,46 @@ const firebaseConfig = {
         let visorMultimediaElementos = null;
         let visorMultimediaHandlerTeclado = null;
 
+        function extraerIdGoogleDrive(url = '') {
+            if (typeof url !== 'string') return null;
+            const limpio = url.trim();
+            if (!limpio) return null;
+
+            const patrones = [
+                /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+                /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
+                /drive\.google\.com\/uc\?[^#]*id=([a-zA-Z0-9_-]+)/,
+                /[?&]id=([a-zA-Z0-9_-]+)/
+            ];
+
+            for (const patron of patrones) {
+                const match = limpio.match(patron);
+                if (match?.[1]) return match[1];
+            }
+            return null;
+        }
+
+        function convertirGoogleDriveADirecto(url = '') {
+            const idArchivo = extraerIdGoogleDrive(url);
+            if (!idArchivo) return url;
+            return `https://drive.google.com/uc?export=view&id=${idArchivo}`;
+        }
+
+        function construirItemImagenDrive(urlOriginal = '', nombre = 'Imagen de Drive') {
+            const idArchivo = extraerIdGoogleDrive(urlOriginal);
+            if (!idArchivo) return null;
+            const urlDirecta = convertirGoogleDriveADirecto(urlOriginal);
+            return {
+                id: idArchivo,
+                nombre,
+                tipo: 'imagen',
+                mimeType: 'image/*',
+                miniatura: urlDirecta,
+                urlVista: `https://drive.google.com/file/d/${idArchivo}/view`,
+                urlReproduccion: urlDirecta
+            };
+        }
+
         function obtenerItemsAlbumMultimedia(idPais, idProvincia, albumIndex) {
             const objDestino = idProvincia ? provinciasVisitadas[idPais]?.[idProvincia] : paisesVisitados[idPais];
             const album = objDestino?.albumes?.[albumIndex];
@@ -1448,11 +1488,11 @@ const firebaseConfig = {
                 </div>
 
                 <div id="form-drive" style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E1F5FE;">
-                    <h4 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle"></i> Agregar Nueva Carpeta</h4>
+                    <h4 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle"></i> Agregar Imagen de Drive</h4>
                     <div style="display:flex; flex-direction: column; gap:10px;">
-                        <input type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Fotos del Hotel)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                        <input type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Atardecer en Lisboa)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
                         <div style="display:flex; gap:10px;">
-                            <input type="text" id="url-carpeta-drive" placeholder="Link de Drive..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                            <input type="text" id="url-carpeta-drive" placeholder="https://drive.google.com/file/d/ID/view?usp=sharing" style="flex:1; padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
                             <button onclick="agregarCarpetaDrive('${idPais}', ${paramProv})" style="background: var(--secondary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold;"><i data-lucide="save"></i></button>
                         </div>
                     </div>
@@ -1574,9 +1614,10 @@ const firebaseConfig = {
                     contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="scroll" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>Aún no has escrito historias.</p></div>';
                 } else {
                     historias.forEach((h, index) => {
+                        const portadaHistoria = convertirGoogleDriveADirecto(h.img || '') || 'https://via.placeholder.com/300x150?text=Sin+Imagen';
                         contenedor.innerHTML += `
                             <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display:flex; flex-direction:column;">
-                                <div style="height:120px; background: #eee url('${h.img || 'https://via.placeholder.com/300x150?text=Sin+Imagen'}') center/cover no-repeat;"></div>
+                                <div style="height:120px; background: #eee url('${portadaHistoria}') center/cover no-repeat;"></div>
                                 <div style="padding: 15px;">
                                     <div style="display:flex; justify-content: space-between; align-items:center;">
                                         <h3 style="margin:0; font-size: 1rem; color: var(--primary);">${h.titulo}</h3>
@@ -1703,65 +1744,17 @@ const firebaseConfig = {
         };
 
         window.cargarArchivosDriveDeAlbum = async function(album, idPais, idProvincia = null) {
-            const folderMatch = (album?.urlCarpeta || '').match(/\/folders\/([a-zA-Z0-9_-]+)|[?&]id=([a-zA-Z0-9_-]+)/);
-            const folderId = folderMatch?.[1] || folderMatch?.[2] || null;
-
-            if (!folderId) {
-                album.errorCarga = 'No se pudo leer el ID de carpeta desde el enlace de Drive.';
-                album.items = [];
-                album.cargando = false;
-                actualizarVistaAlbumes(idPais, idProvincia, 'drive');
-                return;
-            }
+            const itemDrive = construirItemImagenDrive(album?.urlCarpeta || '', album?.nombre || 'Imagen de Drive');
 
             try {
                 album.cargando = true;
                 album.errorCarga = null;
                 actualizarVistaAlbumes(idPais, idProvincia, 'drive');
-
-                const endpointBackend = window.DRIVE_FILES_ENDPOINT || '';
-                const googleApiKey = window.GOOGLE_API_KEY || '';
-                let response;
-
-                if (endpointBackend) {
-                    const joiner = endpointBackend.includes('?') ? '&' : '?';
-                    response = await fetch(`${endpointBackend}${joiner}folderId=${encodeURIComponent(folderId)}`);
-                } else if (googleApiKey) {
-                    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
-                    const fields = encodeURIComponent('files(id,name,mimeType,thumbnailLink,webViewLink,webContentLink),nextPageToken');
-                    const driveUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&key=${googleApiKey}&pageSize=200`;
-                    response = await fetch(driveUrl);
-                } else {
-                    throw new Error('Configura window.DRIVE_FILES_ENDPOINT o window.GOOGLE_API_KEY para consultar archivos de Drive.');
+                if (!itemDrive) {
+                    throw new Error('No se pudo extraer el ID del archivo. Usa un enlace de Drive con formato /file/d/ID/view.');
                 }
-
-                if (!response.ok) {
-                    throw new Error('No se pudo leer la carpeta. Verifica que sea pública o que el endpoint tenga permisos.');
-                }
-
-                const data = await response.json();
-                const files = Array.isArray(data?.files) ? data.files : [];
-
-                const media = files.filter((f) =>
-                    typeof f?.mimeType === 'string' && (f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
-                );
-
-                album.items = media.map((f) => {
-                    const esVideo = f.mimeType.startsWith('video/');
-                    return {
-                        id: f.id,
-                        nombre: f.name,
-                        tipo: esVideo ? 'video' : 'imagen',
-                        mimeType: f.mimeType,
-                        miniatura: f.thumbnailLink || `https://drive.google.com/thumbnail?id=${f.id}&sz=w600`,
-                        urlVista: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
-                        urlReproduccion: esVideo
-                            ? (f.webContentLink || `https://drive.google.com/uc?export=download&id=${f.id}`)
-                            : (f.webContentLink || `https://drive.google.com/uc?export=view&id=${f.id}`)
-                    };
-                });
-
-                album.errorCarga = album.items.length === 0 ? 'La carpeta no tiene imágenes o videos visibles.' : null;
+                album.items = [itemDrive];
+                album.errorCarga = null;
             } catch (error) {
                 console.error('Error cargando archivos de Drive:', error);
                 album.items = [];
@@ -1776,7 +1769,7 @@ const firebaseConfig = {
 
         window.agregarHistoria = function(idPais, idProvincia = null) {
             const titulo = document.getElementById('titulo-historia').value.trim();
-            const img = document.getElementById('img-historia').value.trim();
+            const img = convertirGoogleDriveADirecto(document.getElementById('img-historia').value.trim());
             const texto = document.getElementById('texto-historia').value.trim();
             if (!titulo || !texto) { alert("Tu historia necesita al menos un título y contenido."); return; }
 
@@ -1788,12 +1781,13 @@ const firebaseConfig = {
         window.leerHistoria = function(idPais, idProvincia = null, index) {
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
             const h = objDestino.historias[index];
+            const urlImagen = convertirGoogleDriveADirecto(h.img || '');
             const modal = document.createElement('div');
             modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px;";
             modal.innerHTML = `
                 <div style="background:white; width:100%; max-width:600px; max-height:90vh; border-radius:20px; overflow-y:auto; position:relative; padding-bottom:30px;">
                     <button onclick="this.parentElement.parentElement.remove()" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; font-weight:bold; z-index:10;">X</button>
-                    <div style="width:100%; height:250px; background:url('${h.img}') center/cover no-repeat;"></div>
+                    <div style="width:100%; height:250px; background:url('${urlImagen}') center/cover no-repeat;"></div>
                     <div style="padding:30px;">
                         <span style="color:var(--primary); font-weight:bold; font-size:0.8rem;">${h.fecha}</span>
                         <h2 style="margin-top:5px; color: #263238;">${h.titulo}</h2>
@@ -1821,20 +1815,20 @@ const firebaseConfig = {
             const nombre = document.getElementById('nombre-carpeta-drive').value.trim();
             const urlCarpeta = document.getElementById('url-carpeta-drive').value.trim();
             if (!nombre || !urlCarpeta) { alert("Faltan datos."); return; }
-            if (!urlCarpeta.includes('drive.google.com')) { alert("Link no válido."); return; }
+            const itemDrive = construirItemImagenDrive(urlCarpeta, nombre);
+            if (!itemDrive) { alert("Link no válido. Usa un enlace de archivo de Google Drive."); return; }
 
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
             const nuevoAlbum = {
                 id: `alb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                 nombre,
-                urlCarpeta,
-                items: [],
-                cargando: true,
+                urlCarpeta: convertirGoogleDriveADirecto(urlCarpeta),
+                items: [itemDrive],
+                cargando: false,
                 errorCarga: null
             };
             objDestino.albumes.push(nuevoAlbum);
             actualizarVistaAlbumes(idPais, idProvincia, 'drive');
-            await window.cargarArchivosDriveDeAlbum(nuevoAlbum, idPais, idProvincia);
         };
 
         // Redirigimos la función huérfana para evitar errores con código viejo que tenías debajo
