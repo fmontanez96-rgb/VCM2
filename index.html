@@ -78,16 +78,65 @@
         @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
 
         /* === ÁREA DEL MAPA === */
-        #world-map { width: 100%; height: 100%; position: relative; overflow: hidden; background: #E1F5FE; border-radius: 35px; }
+        #world-map {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            border-radius: 35px;
+            background:
+                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.85) 0 12%, transparent 14%),
+                radial-gradient(circle at 83% 22%, rgba(255, 255, 255, 0.8) 0 10%, transparent 13%),
+                linear-gradient(180deg, #B3E5FC 0%, #E1F5FE 45%, #FCE4EC 100%);
+        }
         #mapa-svg { width: 100%; height: 100%; cursor: grab; }
         #mapa-svg:active { cursor: grabbing; }
 
-        .pais { fill: #CFD8DC; stroke: #FFFFFF; stroke-width: 1.5px; transition: all 0.3s; stroke-linejoin: round; }
-        .pais:hover { fill: #81D4FA; cursor: pointer; }
-        .pais.visitado {fill: #FF0000 !important;}        
-        .pais.sonado { fill: #FFB300; stroke: #FFFFFF; stroke-width: 2px; }
-        .pais.visitado.sonado { fill: #FF7043; } 
-        .provincia.visitada {fill: #FF0000 !important;}        /* === COMPONENTES FLOTANTES === */
+        .mapa-adorno-nube { fill: rgba(255, 255, 255, 0.62); animation: nubeFlotante 9s ease-in-out infinite; }
+        .mapa-adorno-nube.nube-2 { animation-delay: -2.5s; }
+        .mapa-adorno-nube.nube-3 { animation-delay: -5s; }
+        .mapa-adorno-brillo { fill: #fff8d6; opacity: 0.65; animation: brilloParpadea 2.2s ease-in-out infinite; }
+        .mapa-adorno-brillo.brillo-2 { animation-delay: -0.8s; }
+        .mapa-adorno-brillo.brillo-3 { animation-delay: -1.4s; }
+
+        .pais {
+            fill: url(#relleno-pais);
+            stroke: #ffffff;
+            stroke-width: 1.5px;
+            transition: all 0.35s;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 2px 2px rgba(0, 121, 107, 0.2));
+        }
+        .pais:hover {
+            fill: #9be7ff;
+            cursor: pointer;
+            transform: translateY(-1px);
+            filter: drop-shadow(0 5px 7px rgba(0, 188, 212, 0.3));
+        }
+        .pais.visitado { fill: #ff6b9d !important; }
+        .pais.sonado { fill: #ffd166; stroke: #ffffff; stroke-width: 2px; }
+        .pais.visitado.sonado { fill: #ff8c66; }
+
+        .provincia {
+            fill: #fff9ff;
+            stroke: #ff75b5;
+            stroke-width: 1.25px;
+            transition: all 0.25s ease;
+            filter: drop-shadow(0 2px 3px rgba(255, 64, 129, 0.18));
+        }
+        .provincia:hover { fill: #ffd6ec; }
+        .provincia.visitada { fill: #ff6b9d !important; }
+        .provincia.sonada { fill: #ffd166 !important; }
+
+        @keyframes nubeFlotante {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes brilloParpadea {
+            0%, 100% { opacity: 0.35; transform: scale(0.9); }
+            50% { opacity: 0.85; transform: scale(1.15); }
+        }
+        /* === COMPONENTES FLOTANTES === */
         #mapa-error-banner {
             position: absolute;
             top: 15px;
@@ -478,6 +527,50 @@ const firebaseConfig = {
                 .attr("preserveAspectRatio", "xMidYMid meet")
                 .attr("id", "mapa-svg");
 
+            const defs = svg.append("defs");
+            const gradientePaises = defs.append("linearGradient")
+                .attr("id", "relleno-pais")
+                .attr("x1", "0%")
+                .attr("y1", "0%")
+                .attr("x2", "100%")
+                .attr("y2", "100%");
+            gradientePaises.append("stop").attr("offset", "0%").attr("stop-color", "#d7f5dc");
+            gradientePaises.append("stop").attr("offset", "100%").attr("stop-color", "#ace6c1");
+
+            const gradienteMar = defs.append("linearGradient")
+                .attr("id", "fondo-mar")
+                .attr("x1", "0%")
+                .attr("y1", "0%")
+                .attr("x2", "0%")
+                .attr("y2", "100%");
+            gradienteMar.append("stop").attr("offset", "0%").attr("stop-color", "#b3ecff");
+            gradienteMar.append("stop").attr("offset", "100%").attr("stop-color", "#d7f2ff");
+
+            svg.append("rect")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("fill", "url(#fondo-mar)")
+                .attr("opacity", 0.85);
+
+            const adornos = svg.append("g").attr("id", "mapa-adornos").attr("pointer-events", "none");
+            const nubes = [
+                { x: 105, y: 80, r: 22, c: "mapa-adorno-nube" },
+                { x: 680, y: 95, r: 18, c: "mapa-adorno-nube nube-2" },
+                { x: 580, y: 310, r: 16, c: "mapa-adorno-nube nube-3" }
+            ];
+            nubes.forEach(n => {
+                adornos.append("circle").attr("cx", n.x).attr("cy", n.y).attr("r", n.r).attr("class", n.c);
+                adornos.append("circle").attr("cx", n.x + 19).attr("cy", n.y + 4).attr("r", n.r * 0.85).attr("class", n.c);
+                adornos.append("circle").attr("cx", n.x - 18).attr("cy", n.y + 5).attr("r", n.r * 0.8).attr("class", n.c);
+            });
+
+            const brillos = [
+                { x: 200, y: 70, r: 5, c: "mapa-adorno-brillo" },
+                { x: 740, y: 160, r: 4, c: "mapa-adorno-brillo brillo-2" },
+                { x: 90, y: 300, r: 6, c: "mapa-adorno-brillo brillo-3" }
+            ];
+            brillos.forEach(b => adornos.append("circle").attr("cx", b.x).attr("cy", b.y).attr("r", b.r).attr("class", b.c));
+
             const g = svg.append("g").attr("id", "contenedor-mundo");
 
             const zoom = d3.zoom()
@@ -798,9 +891,10 @@ const firebaseConfig = {
                 gDetalle.append("path")
                     .datum(geoData)
                     .attr("d", path)
-                    .style("fill", "#B2EBF2")
+                    .style("fill", "#D4F7FF")
                     .style("stroke", "#00BCD4")
-                    .style("stroke-width", "3");
+                    .style("stroke-width", "3")
+                    .style("stroke-dasharray", "8 6");
 
                 gDetalle.selectAll(".provincia")
                     .data(provincias)
@@ -811,12 +905,10 @@ const firebaseConfig = {
                     .attr("d", path)
                     .style("fill", function(d) {
                         const provId = obtenerIdProvincia(d);
-                        if (provinciasVisitadas[idPais] && provinciasVisitadas[idPais][provId]) return "#FF0000";
-                        if (destinosSonados[idPais] && destinosSonados[idPais].provincias && destinosSonados[idPais].provincias[provId]) return "#FFB300";
-                        return "#FFFFFF";
+                        if (provinciasVisitadas[idPais] && provinciasVisitadas[idPais][provId]) return "#FF6B9D";
+                        if (destinosSonados[idPais] && destinosSonados[idPais].provincias && destinosSonados[idPais].provincias[provId]) return "#FFD166";
+                        return "#FFF9FF";
                     })
-                    .style("stroke", "#FF4081")
-                    .style("stroke-width", "1.2px")
                     .on("mouseover", function(event, d) {
                         const nombre = d.properties.name || d.properties.name_en || "Provincia";
                         const [x, y] = d3.pointer(event, container.node());
@@ -874,7 +966,7 @@ const firebaseConfig = {
 
                             if (!provinciasVisitadas[idPais][idProvincia]) {
                                 provinciasVisitadas[idPais][idProvincia] = { nombre: nombreProvincia };
-                                pathElem.classed('visitada', true).style("fill", "#FF0000");
+                                pathElem.classed('visitada', true).style("fill", "#FF6B9D");
 
                                 if (!paisesVisitados[idPais]) {
                                     paisesVisitados[idPais] = { nombre: nombrePais, albumes: [], historias: [], musica: null };
@@ -882,7 +974,7 @@ const firebaseConfig = {
                                 d3.select(`.pais[id="${idPais}"]`).classed('visitado', true);
                             } else {
                                 delete provinciasVisitadas[idPais][idProvincia];
-                                pathElem.classed('visitada', false).style("fill", "#FFFFFF");
+                                pathElem.classed('visitada', false).style("fill", "#FFF9FF");
                             }
 
                             menu.classed("menu-visible", false).classed("menu-oculto", true);
