@@ -308,9 +308,27 @@ const firebaseConfig = {
             paisesVisitados = estado?.paisesVisitados || {};
             provinciasVisitadas = estado?.provinciasVisitadas || {};
             destinosSonados = estado?.destinosSonados || {};
+            normalizarDestinosSonados();
             cargarMapa();
             renderizarPantallaRecuerdos();
             renderizarPantallaSonados();
+        }
+
+        function normalizarDestinosSonados() {
+            Object.keys(destinosSonados || {}).forEach((idPais) => {
+                const destino = destinosSonados[idPais];
+                if (!destino || typeof destino !== "object") {
+                    delete destinosSonados[idPais];
+                    return;
+                }
+
+                destino.nombre = destino.nombre || destino.destinoFinal || "Destino";
+                destino.destinoFinal = destino.destinoFinal || destino.nombre;
+                destino.escalas = Array.isArray(destino.escalas) ? destino.escalas : [];
+                destino.escalasCiudades = Array.isArray(destino.escalasCiudades) ? destino.escalasCiudades : [];
+                destino.itinerario = Array.isArray(destino.itinerario) ? destino.itinerario : [];
+                destino.ciudadDestinoFinal = destino.ciudadDestinoFinal || "";
+            });
         }
 
         function guardarEstadoEnFirebase(forzar = false) {
@@ -857,6 +875,7 @@ const firebaseConfig = {
         }
 
         function renderizarPantallaSonados() {
+            normalizarDestinosSonados();
             const contenedor = document.getElementById('vista-por-vivir');
             const idsPaises = Object.keys(destinosSonados);
 
@@ -914,7 +933,7 @@ const firebaseConfig = {
                 listaHTML.className = 'lista-paises';
                 idsPaises.forEach(id => {
                     const pais = destinosSonados[id];
-                    const numItems = pais.itinerario.length;
+                    const numItems = Array.isArray(pais.itinerario) ? pais.itinerario.length : 0;
                     const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
                     listaHTML.innerHTML += `
                         <div class="tarjeta-pais">
@@ -1723,8 +1742,13 @@ const firebaseConfig = {
         };
 
         window.abrirPlanificador = function(idPais) {
+            normalizarDestinosSonados();
             const pais = destinosSonados[idPais];
             const scrollArea = document.getElementById('scroll-sonados');
+            if (!pais || !scrollArea) {
+                renderizarPantallaSonados();
+                return;
+            }
 
             const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
 
