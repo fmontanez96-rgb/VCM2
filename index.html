@@ -232,6 +232,36 @@
         .badge-horario { background: #F5F5F5; padding: 3px 8px; border-radius: 10px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; color: #78909C; }
         .btn-eliminar-item { background: none; border: none; color: #FFCDD2; cursor: pointer; transition: 0.2s; }
         .btn-eliminar-item:hover { color: #F44336; transform: scale(1.1); }
+        .item-header-actions { display: flex; align-items: center; gap: 12px; }
+        .miniatura-aventura {
+            width: 88px;
+            height: 68px;
+            border-radius: 10px;
+            border: 2px solid #B3E5FC;
+            object-fit: cover;
+            box-shadow: 0 5px 12px rgba(0, 188, 212, 0.18);
+            background: #ECEFF1;
+            flex-shrink: 0;
+        }
+        .portada-itinerario-wrap {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+            background: #FFF8FA;
+            border: 2px dashed #F8BBD0;
+            border-radius: 14px;
+            padding: 12px;
+        }
+        .portada-itinerario-preview {
+            width: 120px;
+            height: 78px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 2px solid #F8BBD0;
+            background: #ECEFF1;
+        }
 
     </style>
 </head>
@@ -332,6 +362,7 @@ const firebaseConfig = {
                 destino.escalasCiudades = Array.isArray(destino.escalasCiudades) ? destino.escalasCiudades : [];
                 destino.itinerario = Array.isArray(destino.itinerario) ? destino.itinerario : [];
                 destino.ciudadDestinoFinal = destino.ciudadDestinoFinal || "";
+                destino.portadaUrl = destino.portadaUrl || "";
             });
         }
 
@@ -1761,6 +1792,7 @@ const firebaseConfig = {
 
             const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
             const escalasResumen = obtenerResumenEscalas(pais);
+            const portadaActual = pais.portadaUrl || "";
 
             scrollArea.innerHTML = `
                 <div class="cabecera-detalle">
@@ -1784,6 +1816,13 @@ const firebaseConfig = {
                 </div>
                 
                 <div class="panel-creacion">
+                    <div class="portada-itinerario-wrap">
+                        <img class="portada-itinerario-preview" src="${portadaActual || 'https://via.placeholder.com/240x150?text=Sin+Portada'}" alt="Portada del itinerario">
+                        <div style="display:flex; gap:10px; flex:1; min-width: 240px;">
+                            <input type="url" id="input-portada-itinerario" placeholder="URL de portada del itinerario..." value="${portadaActual}" style="flex:1; padding:10px 12px; border-radius:10px; border:2px solid #F8BBD0; font-family: inherit;">
+                            <button class="btn-tipo-item" style="border-color:#F48FB1; color:#D81B60;" onclick="guardarPortadaItinerario('${idPais}')"><i data-lucide="image-plus"></i> Guardar portada</button>
+                        </div>
+                    </div>
                     <h3 style="margin-top:0; color: #455A64;">Agregar nuevo paso:</h3>
                     <div class="botones-tipos">
                         <button class="btn-tipo-item" onclick="mostrarFormularioItinerario('viaje', this)"><i data-lucide="bus"></i> Viaje</button>
@@ -1939,6 +1978,7 @@ const firebaseConfig = {
             } else if (tipo === 'aventura') {
                 formHTML += `
                     <div class="campo-form"><label>Lugar a visitar</label><input type="text" id="input-aventura-lugar" placeholder="Ej. Cristo Redentor"></div>
+                    <div class="campo-form"><label>Miniatura (URL)</label><input type="url" id="input-aventura-miniatura" placeholder="Ej. https://.../cristo-redentor.jpg"></div>
                     <div style="display: flex; gap: 10px;">
                         <div class="campo-form" style="flex: 1;"><label>Día</label><input type="text" id="input-aventura-dia" placeholder="Ej. Día 2"></div>
                         <div class="campo-form" style="flex: 1;"><label>Precio ($)</label><input type="number" id="input-aventura-costo" placeholder="0"></div>
@@ -1994,6 +2034,7 @@ const firebaseConfig = {
                 nuevoItem.costo = document.getElementById('input-hospedaje-costo').value || '0';
             } else if (tipo === 'aventura') {
                 nuevoItem.lugar = document.getElementById('input-aventura-lugar').value || 'Aventura';
+                nuevoItem.miniatura = document.getElementById('input-aventura-miniatura').value.trim();
                 nuevoItem.dia = document.getElementById('input-aventura-dia').value || 'Día 1';
                 nuevoItem.costo = document.getElementById('input-aventura-costo').value || '0';
                 nuevoItem.llegada = document.getElementById('input-aventura-llegada').value;
@@ -2028,14 +2069,24 @@ const firebaseConfig = {
                 else if (item.tipo === 'hospedaje') { icono = 'hotel'; titulo = item.hotel; detalles = `${item.noches} noches - Total: $${item.costo}`; }
                 else if (item.tipo === 'aventura') { icono = 'mountain'; titulo = item.lugar; detalles = `Día: ${item.dia} ($${item.costo})<br>${item.llegada || ''} - ${item.partida || ''}`; }
                 else if (item.tipo === 'restaurante') { icono = 'utensils'; titulo = item.plato; detalles = `Gasto: $${item.precio}`; }
+                const miniaturaAventura = item.tipo === 'aventura' && item.miniatura
+                    ? `<img src="${item.miniatura}" alt="Miniatura de ${item.lugar || 'aventura'}" class="miniatura-aventura">`
+                    : '';
                 timeline.innerHTML += `
                     <div class="item-timeline ${item.tipo}"><div class="punto-timeline"></div>
                         <div class="item-header"><h4 class="item-titulo"><i data-lucide="${icono}"></i> ${titulo}</h4>
-                        <button class="btn-eliminar-item" onclick="eliminarItemItinerario('${idPais}', ${item.id})"><i data-lucide="trash-2"></i></button></div>
+                        <div class="item-header-actions">${miniaturaAventura}<button class="btn-eliminar-item" onclick="eliminarItemItinerario('${idPais}', ${item.id})"><i data-lucide="trash-2"></i></button></div></div>
                         <div class="item-detalles">${detalles}</div>
                     </div>`;
             });
             lucide.createIcons();
+        };
+
+        window.guardarPortadaItinerario = function(idPais) {
+            const input = document.getElementById('input-portada-itinerario');
+            if (!input || !destinosSonados[idPais]) return;
+            destinosSonados[idPais].portadaUrl = input.value.trim();
+            abrirPlanificador(idPais);
         };
         document.addEventListener("DOMContentLoaded", iniciarSincronizacionFirebase);
     </script>
