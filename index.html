@@ -229,6 +229,82 @@
         .btn-eliminar-item { background: none; border: none; color: #FFCDD2; cursor: pointer; transition: 0.2s; }
         .btn-eliminar-item:hover { color: #F44336; transform: scale(1.1); }
 
+        .album-media-grid {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+            gap: 10px;
+        }
+        .album-thumb-card {
+            position: relative;
+            border: none;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #ECEFF1;
+            padding: 0;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            min-height: 92px;
+        }
+        .album-thumb-card img {
+            width: 100%;
+            height: 100%;
+            min-height: 92px;
+            object-fit: cover;
+            display: block;
+        }
+        .album-thumb-card:hover,
+        .album-thumb-card:focus-visible {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 188, 212, 0.25);
+            outline: 3px solid rgba(0, 188, 212, 0.45);
+            outline-offset: 2px;
+        }
+        .album-thumb-type-badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0, 0, 0, 0.66);
+            color: #FFFFFF;
+            font-size: 0.65rem;
+            padding: 3px 6px;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .album-empty-state {
+            margin-top: 14px;
+            padding: 12px;
+            border-radius: 10px;
+            background: #F8FAFC;
+            border: 1px dashed #CBD5E1;
+            color: #64748B;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        .btn-refresh-album {
+            margin-top: 12px;
+            width: 100%;
+            border: 1px solid #00BCD4;
+            background: transparent;
+            color: #00838F;
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-refresh-album:hover,
+        .btn-refresh-album:focus-visible {
+            background: #E0F7FA;
+            color: #006064;
+            outline: 3px solid rgba(0, 188, 212, 0.35);
+            outline-offset: 1px;
+        }
+
     </style>
 </head>
 <body>
@@ -1405,13 +1481,27 @@ const firebaseConfig = {
                 } else {
                     albumes.forEach((album, index) => {
                         const nombreAlbum = album?.nombre || 'Álbum sin nombre';
-                        const urlCarpeta = album?.urlCarpeta || album?.url || '#';
                         const itemsAlbum = Array.isArray(album?.items) ? album.items : [];
                         const errorCarga = album?.errorCarga || '';
                         const estadoCarga = album?.cargando ? '<p style="margin:10px 0 0; font-size:0.75rem; color:#0288D1;">Cargando archivos...</p>' : '';
                         const mensajeError = errorCarga
                             ? `<p style="margin:10px 0 0; font-size:0.75rem; color:#D32F2F; background:#FFEBEE; padding:8px; border-radius:8px;">⚠️ ${errorCarga}</p>`
                             : '';
+                        const grillaMiniaturas = itemsAlbum.length > 0
+                            ? `<div class="album-media-grid">
+                                ${itemsAlbum.map((item, itemIndex) => `
+                                    <button
+                                        type="button"
+                                        class="album-thumb-card"
+                                        title="${item?.nombre || `Elemento ${itemIndex + 1}`}"
+                                        onclick="abrirVisorAlbumDrive('${idPais}', ${paramProv}, ${index}, ${itemIndex})"
+                                    >
+                                        <img src="${item?.miniatura || ''}" alt="${item?.nombre || `Multimedia ${itemIndex + 1}`}">
+                                        <span class="album-thumb-type-badge">${item?.tipo === 'video' ? 'VIDEO' : 'FOTO'}</span>
+                                    </button>
+                                `).join('')}
+                            </div>`
+                            : `<div class="album-empty-state">Sin multimedia aún</div>`;
                         contenedor.innerHTML += `
                             <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 5px solid var(--secondary);">
                                 <div style="padding: 15px;">
@@ -1422,7 +1512,8 @@ const firebaseConfig = {
                                     <p style="margin:10px 0 0; font-size:0.75rem; color:#78909C;">${itemsAlbum.length} archivo(s)</p>
                                     ${estadoCarga}
                                     ${mensajeError}
-                                    <a href="${urlCarpeta}" target="_blank" style="display:block; margin-top:15px; text-align:center; background:#DB4437; color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.8rem;">ABRIR DRIVE</a>
+                                    ${grillaMiniaturas}
+                                    <button type="button" class="btn-refresh-album" onclick="actualizarContenidoAlbumDrive('${idPais}', ${paramProv}, ${index})">Actualizar contenido</button>
                                 </div>
                             </div>`;
                     });
@@ -1449,6 +1540,40 @@ const firebaseConfig = {
                 }
             }
             lucide.createIcons();
+        };
+
+        window.actualizarContenidoAlbumDrive = async function(idPais, idProvincia = null, indexAlbum) {
+            const objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
+            const album = objDestino?.albumes?.[indexAlbum];
+            if (!album) return;
+            await window.cargarArchivosDriveDeAlbum(album, idPais, idProvincia);
+        };
+
+        window.abrirVisorAlbumDrive = function(idPais, idProvincia = null, indexAlbum, indexItem) {
+            const objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
+            const album = objDestino?.albumes?.[indexAlbum];
+            const items = Array.isArray(album?.items) ? album.items : [];
+            const item = items[indexItem];
+            if (!item) return;
+
+            const esVideo = item.tipo === 'video';
+            const contenido = esVideo
+                ? `<video src="${item.urlReproduccion || item.urlVista}" controls autoplay style="max-width:100%; max-height:70vh; border-radius:12px; background:#000;"></video>`
+                : `<img src="${item.urlReproduccion || item.urlVista || item.miniatura}" alt="${item.nombre || 'Multimedia'}" style="max-width:100%; max-height:70vh; border-radius:12px; object-fit:contain; background:#000;">`;
+
+            const modal = document.createElement('div');
+            modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px;";
+            modal.innerHTML = `
+                <div style="background:#111827; width:100%; max-width:960px; border-radius:18px; overflow:hidden; position:relative; padding:20px; color:#fff;">
+                    <button onclick="this.closest('.modal-drive-viewer').remove()" style="position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.2); color:white; border:none; border-radius:50%; width:34px; height:34px; cursor:pointer; font-weight:bold; z-index:10;">✕</button>
+                    <div style="font-size:0.8rem; color:#E5E7EB; margin-bottom:12px;">${album?.nombre || 'Álbum'} · ${indexItem + 1} / ${items.length}</div>
+                    <div style="display:flex; justify-content:center; align-items:center;">${contenido}</div>
+                </div>`;
+            modal.className = 'modal-drive-viewer';
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) modal.remove();
+            });
+            document.body.appendChild(modal);
         };
 
         window.cargarArchivosDriveDeAlbum = async function(album, idPais, idProvincia = null) {
