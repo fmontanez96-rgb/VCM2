@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -8,6 +8,8 @@
     <!-- Librerías Externas -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet">
 
     <style>
@@ -262,13 +264,109 @@
     </div>
 
     <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyB3KdarawI0Ch0HYOQo6LXkDP5Zclui0yI",
+  authDomain: "carolandia-199a5.firebaseapp.com",
+  databaseURL: "https://carolandia-199a5-default-rtdb.firebaseio.com",
+  projectId: "carolandia-199a5",
+  storageBucket: "carolandia-199a5.firebasestorage.app",
+  messagingSenderId: "940168409879",
+  appId: "1:940168409879:web:cde4e3bd76a934f4e47d52",
+  measurementId: "G-HEDFE5BZ7X"
+};
         lucide.createIcons();
 
         // BASES DE DATOS EN MEMORIA
         let paisesVisitados = {};
         let provinciasVisitadas = {}; 
         let destinosSonados = {}; 
+        let firebaseDb = null;
+        let estadoInicialSincronizado = false;
+        let ultimaHuellaSincronizada = "";
+        let intervaloAutosave = null;
+        const RUTA_ESTADO_FIREBASE = "nuestraHistoria/estadoCompartido";
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
+
+        function obtenerEstadoActual() {
+            return {
+                paisesVisitados,
+                provinciasVisitadas,
+                destinosSonados,
+                actualizadoEn: new Date().toISOString()
+            };
+        }
+
+        function calcularHuellaEstado(estado = obtenerEstadoActual()) {
+            return JSON.stringify({
+                paisesVisitados: estado.paisesVisitados || {},
+                provinciasVisitadas: estado.provinciasVisitadas || {},
+                destinosSonados: estado.destinosSonados || {}
+            });
+        }
+
+        function aplicarEstadoRemoto(estado) {
+            paisesVisitados = estado?.paisesVisitados || {};
+            provinciasVisitadas = estado?.provinciasVisitadas || {};
+            destinosSonados = estado?.destinosSonados || {};
+            cargarMapa();
+            renderizarPantallaRecuerdos();
+            renderizarPantallaSonados();
+        }
+
+        function guardarEstadoEnFirebase(forzar = false) {
+            if (!firebaseDb || !estadoInicialSincronizado) return;
+
+            const estado = obtenerEstadoActual();
+            const huellaActual = calcularHuellaEstado(estado);
+            if (!forzar && huellaActual === ultimaHuellaSincronizada) return;
+
+            firebaseDb.ref(RUTA_ESTADO_FIREBASE).set(estado)
+                .then(() => {
+                    ultimaHuellaSincronizada = huellaActual;
+                })
+                .catch((error) => {
+                    console.error("No se pudo guardar en Firebase:", error);
+                });
+        }
+
+        function iniciarSincronizacionFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                firebaseDb = firebase.database();
+
+                firebaseDb.ref(RUTA_ESTADO_FIREBASE).on("value", (snapshot) => {
+                    const estadoRemoto = snapshot.val();
+                    if (estadoRemoto) {
+                        const huellaRemota = calcularHuellaEstado(estadoRemoto);
+                        if (huellaRemota !== ultimaHuellaSincronizada) {
+                            ultimaHuellaSincronizada = huellaRemota;
+                            aplicarEstadoRemoto(estadoRemoto);
+                        }
+                    } else {
+                        cargarMapa();
+                        renderizarPantallaRecuerdos();
+                        renderizarPantallaSonados();
+                        estadoInicialSincronizado = true;
+                        guardarEstadoEnFirebase(true);
+                    }
+
+                    estadoInicialSincronizado = true;
+                }, (error) => {
+                    console.error("Error al leer estado desde Firebase:", error);
+                    estadoInicialSincronizado = true;
+                    cargarMapa();
+                });
+
+                intervaloAutosave = setInterval(() => guardarEstadoEnFirebase(), 1200);
+                window.addEventListener("beforeunload", () => guardarEstadoEnFirebase(true));
+            } catch (error) {
+                console.error("No se pudo inicializar Firebase:", error);
+                estadoInicialSincronizado = true;
+                cargarMapa();
+            }
+        }
 
         function manejarErrorMapaDetallado(err) {
             const mensaje = `No se pudo cargar ${ESTADOS_PROVINCIAS_URL}. Verifica tu conexión a internet y CORS.`;
@@ -1849,7 +1947,7 @@
             });
             lucide.createIcons();
         };
-        document.addEventListener("DOMContentLoaded", cargarMapa);
+        document.addEventListener("DOMContentLoaded", iniciarSincronizacionFirebase);
     </script>
 </body>
 </html>
