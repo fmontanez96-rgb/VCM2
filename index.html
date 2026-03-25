@@ -8,8 +8,6 @@
     <!-- Librerías Externas -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet">
 
     <style>
@@ -229,82 +227,6 @@
         .btn-eliminar-item { background: none; border: none; color: #FFCDD2; cursor: pointer; transition: 0.2s; }
         .btn-eliminar-item:hover { color: #F44336; transform: scale(1.1); }
 
-        .album-media-grid {
-            margin-top: 14px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-            gap: 10px;
-        }
-        .album-thumb-card {
-            position: relative;
-            border: none;
-            border-radius: 10px;
-            overflow: hidden;
-            background: #ECEFF1;
-            padding: 0;
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            min-height: 92px;
-        }
-        .album-thumb-card img {
-            width: 100%;
-            height: 100%;
-            min-height: 92px;
-            object-fit: cover;
-            display: block;
-        }
-        .album-thumb-card:hover,
-        .album-thumb-card:focus-visible {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0, 188, 212, 0.25);
-            outline: 3px solid rgba(0, 188, 212, 0.45);
-            outline-offset: 2px;
-        }
-        .album-thumb-type-badge {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            background: rgba(0, 0, 0, 0.66);
-            color: #FFFFFF;
-            font-size: 0.65rem;
-            padding: 3px 6px;
-            border-radius: 999px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-        }
-        .album-empty-state {
-            margin-top: 14px;
-            padding: 12px;
-            border-radius: 10px;
-            background: #F8FAFC;
-            border: 1px dashed #CBD5E1;
-            color: #64748B;
-            text-align: center;
-            font-size: 0.85rem;
-            font-weight: 700;
-        }
-        .btn-refresh-album {
-            margin-top: 12px;
-            width: 100%;
-            border: 1px solid #00BCD4;
-            background: transparent;
-            color: #00838F;
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-family: inherit;
-            font-size: 0.8rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-refresh-album:hover,
-        .btn-refresh-album:focus-visible {
-            background: #E0F7FA;
-            color: #006064;
-            outline: 3px solid rgba(0, 188, 212, 0.35);
-            outline-offset: 1px;
-        }
-
     </style>
 </head>
 <body>
@@ -340,199 +262,13 @@
     </div>
 
     <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyB3KdarawI0Ch0HYOQo6LXkDP5Zclui0yI",
-  authDomain: "carolandia-199a5.firebaseapp.com",
-  databaseURL: "https://carolandia-199a5-default-rtdb.firebaseio.com",
-  projectId: "carolandia-199a5",
-  storageBucket: "carolandia-199a5.firebasestorage.app",
-  messagingSenderId: "940168409879",
-  appId: "1:940168409879:web:cde4e3bd76a934f4e47d52",
-  measurementId: "G-HEDFE5BZ7X"
-};
         lucide.createIcons();
 
         // BASES DE DATOS EN MEMORIA
         let paisesVisitados = {};
         let provinciasVisitadas = {}; 
         let destinosSonados = {}; 
-        let firebaseDb = null;
-        let estadoInicialSincronizado = false;
-        let ultimaHuellaSincronizada = "";
-        let intervaloAutosave = null;
-        const RUTA_ESTADO_FIREBASE = "nuestraHistoria/estadoCompartido";
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
-        let visorMultimediaEstado = null;
-        let visorMultimediaElementos = null;
-        let visorMultimediaHandlerTeclado = null;
-
-        function extraerIdGoogleDrive(url = '') {
-            if (typeof url !== 'string') return null;
-            const limpio = url.trim();
-            if (!limpio) return null;
-
-            const patrones = [
-                /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
-                /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
-                /drive\.google\.com\/uc\?[^#]*id=([a-zA-Z0-9_-]+)/,
-                /[?&]id=([a-zA-Z0-9_-]+)/
-            ];
-
-            for (const patron of patrones) {
-                const match = limpio.match(patron);
-                if (match?.[1]) return match[1];
-            }
-            return null;
-        }
-
-        function convertirGoogleDriveADirecto(url = '') {
-            const idArchivo = extraerIdGoogleDrive(url);
-            if (!idArchivo) return url;
-            return `https://drive.google.com/uc?export=view&id=${idArchivo}`;
-        }
-
-        function construirItemImagenDrive(urlOriginal = '', nombre = 'Imagen de Drive') {
-            const idArchivo = extraerIdGoogleDrive(urlOriginal);
-            if (!idArchivo) return null;
-            const urlDirecta = convertirGoogleDriveADirecto(urlOriginal);
-            return {
-                id: idArchivo,
-                nombre,
-                tipo: 'imagen',
-                mimeType: 'image/*',
-                miniatura: urlDirecta,
-                urlVista: `https://drive.google.com/file/d/${idArchivo}/view`,
-                urlReproduccion: urlDirecta
-            };
-        }
-
-        function obtenerItemsAlbumMultimedia(idPais, idProvincia, albumIndex) {
-            const objDestino = idProvincia ? provinciasVisitadas[idPais]?.[idProvincia] : paisesVisitados[idPais];
-            const album = objDestino?.albumes?.[albumIndex];
-            return {
-                album,
-                items: Array.isArray(album?.items) ? album.items : []
-            };
-        }
-
-        function renderizarItemVisorMultimedia() {
-            if (!visorMultimediaEstado || !visorMultimediaElementos) return;
-            const { album, items } = obtenerItemsAlbumMultimedia(
-                visorMultimediaEstado.idPais,
-                visorMultimediaEstado.idProvincia,
-                visorMultimediaEstado.albumIndex
-            );
-            if (!items.length) {
-                cerrarVisorMultimedia();
-                return;
-            }
-
-            if (visorMultimediaEstado.itemIndex >= items.length) visorMultimediaEstado.itemIndex = items.length - 1;
-            if (visorMultimediaEstado.itemIndex < 0) visorMultimediaEstado.itemIndex = 0;
-
-            const item = items[visorMultimediaEstado.itemIndex];
-            const esVideo = item?.tipo === 'video';
-            const mediaSrc = item?.urlReproduccion || item?.urlVista || item?.miniatura || '';
-
-            visorMultimediaElementos.contador.textContent = `${visorMultimediaEstado.itemIndex + 1} / ${items.length}`;
-            visorMultimediaElementos.titulo.textContent = album?.nombre || 'Álbum';
-            visorMultimediaElementos.contenido.innerHTML = '';
-
-            const media = document.createElement(esVideo ? 'video' : 'img');
-            media.style.maxWidth = '100%';
-            media.style.maxHeight = '70vh';
-            media.style.borderRadius = '12px';
-            media.style.objectFit = 'contain';
-            media.style.background = '#000';
-            media.src = mediaSrc;
-            media.alt = item?.nombre || 'Multimedia';
-            if (esVideo) {
-                media.controls = true;
-                media.autoplay = true;
-            }
-            visorMultimediaElementos.contenido.appendChild(media);
-        }
-
-        function obtenerEstadoActual() {
-            return {
-                paisesVisitados,
-                provinciasVisitadas,
-                destinosSonados,
-                actualizadoEn: new Date().toISOString()
-            };
-        }
-
-        function calcularHuellaEstado(estado = obtenerEstadoActual()) {
-            return JSON.stringify({
-                paisesVisitados: estado.paisesVisitados || {},
-                provinciasVisitadas: estado.provinciasVisitadas || {},
-                destinosSonados: estado.destinosSonados || {}
-            });
-        }
-
-        function aplicarEstadoRemoto(estado) {
-            paisesVisitados = estado?.paisesVisitados || {};
-            provinciasVisitadas = estado?.provinciasVisitadas || {};
-            destinosSonados = estado?.destinosSonados || {};
-            cargarMapa();
-            renderizarPantallaRecuerdos();
-            renderizarPantallaSonados();
-        }
-
-        function guardarEstadoEnFirebase(forzar = false) {
-            if (!firebaseDb || !estadoInicialSincronizado) return;
-
-            const estado = obtenerEstadoActual();
-            const huellaActual = calcularHuellaEstado(estado);
-            if (!forzar && huellaActual === ultimaHuellaSincronizada) return;
-
-            firebaseDb.ref(RUTA_ESTADO_FIREBASE).set(estado)
-                .then(() => {
-                    ultimaHuellaSincronizada = huellaActual;
-                })
-                .catch((error) => {
-                    console.error("No se pudo guardar en Firebase:", error);
-                });
-        }
-
-        function iniciarSincronizacionFirebase() {
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
-                }
-                firebaseDb = firebase.database();
-
-                firebaseDb.ref(RUTA_ESTADO_FIREBASE).on("value", (snapshot) => {
-                    const estadoRemoto = snapshot.val();
-                    if (estadoRemoto) {
-                        const huellaRemota = calcularHuellaEstado(estadoRemoto);
-                        if (huellaRemota !== ultimaHuellaSincronizada) {
-                            ultimaHuellaSincronizada = huellaRemota;
-                            aplicarEstadoRemoto(estadoRemoto);
-                        }
-                    } else {
-                        cargarMapa();
-                        renderizarPantallaRecuerdos();
-                        renderizarPantallaSonados();
-                        estadoInicialSincronizado = true;
-                        guardarEstadoEnFirebase(true);
-                    }
-
-                    estadoInicialSincronizado = true;
-                }, (error) => {
-                    console.error("Error al leer estado desde Firebase:", error);
-                    estadoInicialSincronizado = true;
-                    cargarMapa();
-                });
-
-                intervaloAutosave = setInterval(() => guardarEstadoEnFirebase(), 1200);
-                window.addEventListener("beforeunload", () => guardarEstadoEnFirebase(true));
-            } catch (error) {
-                console.error("No se pudo inicializar Firebase:", error);
-                estadoInicialSincronizado = true;
-                cargarMapa();
-            }
-        }
 
         function manejarErrorMapaDetallado(err) {
             const mensaje = `No se pudo cargar ${ESTADOS_PROVINCIAS_URL}. Verifica tu conexión a internet y CORS.`;
@@ -1488,11 +1224,11 @@ const firebaseConfig = {
                 </div>
 
                 <div id="form-drive" style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E1F5FE;">
-                    <h4 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle"></i> Agregar Imagen de Drive</h4>
+                    <h4 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle"></i> Agregar Nueva Carpeta</h4>
                     <div style="display:flex; flex-direction: column; gap:10px;">
-                        <input type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Atardecer en Lisboa)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                        <input type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Fotos del Hotel)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
                         <div style="display:flex; gap:10px;">
-                            <input type="text" id="url-carpeta-drive" placeholder="https://drive.google.com/file/d/ID/view?usp=sharing" style="flex:1; padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
+                            <input type="text" id="url-carpeta-drive" placeholder="Link de Drive..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
                             <button onclick="agregarCarpetaDrive('${idPais}', ${paramProv})" style="background: var(--secondary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold;"><i data-lucide="save"></i></button>
                         </div>
                     </div>
@@ -1570,40 +1306,14 @@ const firebaseConfig = {
                     contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="folder-x" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>No hay carpetas compartidas aún.</p></div>';
                 } else {
                     albumes.forEach((album, index) => {
-                        const nombreAlbum = album?.nombre || 'Álbum sin nombre';
-                        const itemsAlbum = Array.isArray(album?.items) ? album.items : [];
-                        const errorCarga = album?.errorCarga || '';
-                        const estadoCarga = album?.cargando ? '<p style="margin:10px 0 0; font-size:0.75rem; color:#0288D1;">Cargando archivos...</p>' : '';
-                        const mensajeError = errorCarga
-                            ? `<p style="margin:10px 0 0; font-size:0.75rem; color:#D32F2F; background:#FFEBEE; padding:8px; border-radius:8px;">⚠️ ${errorCarga}</p>`
-                            : '';
-                        const grillaMiniaturas = itemsAlbum.length > 0
-                            ? `<div class="album-media-grid">
-                                ${itemsAlbum.map((item, itemIndex) => `
-                                    <button
-                                        type="button"
-                                        class="album-thumb-card"
-                                        title="${item?.nombre || `Elemento ${itemIndex + 1}`}"
-                                        onclick="abrirVisorMultimedia('${idPais}', ${paramProv}, ${index}, ${itemIndex})"
-                                    >
-                                        <img src="${item?.miniatura || ''}" alt="${item?.nombre || `Multimedia ${itemIndex + 1}`}">
-                                        <span class="album-thumb-type-badge">${item?.tipo === 'video' ? 'VIDEO' : 'FOTO'}</span>
-                                    </button>
-                                `).join('')}
-                            </div>`
-                            : `<div class="album-empty-state">Sin multimedia aún</div>`;
                         contenedor.innerHTML += `
                             <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 5px solid var(--secondary);">
                                 <div style="padding: 15px;">
                                     <div style="display:flex; justify-content: space-between;">
-                                        <h3 style="margin:0; font-size: 1rem;">${nombreAlbum}</h3>
+                                        <h3 style="margin:0; font-size: 1rem;">${album.nombre}</h3>
                                         <button onclick="eliminarMemoria('${idPais}', ${paramProv}, ${index}, 'drive')" style="background:none; border:none; color: #EF5350; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
                                     </div>
-                                    <p style="margin:10px 0 0; font-size:0.75rem; color:#78909C;">${itemsAlbum.length} archivo(s)</p>
-                                    ${estadoCarga}
-                                    ${mensajeError}
-                                    ${grillaMiniaturas}
-                                    <button type="button" class="btn-refresh-album" onclick="actualizarContenidoAlbumDrive('${idPais}', ${paramProv}, ${index})">Actualizar contenido</button>
+                                    <a href="${album.url}" target="_blank" style="display:block; margin-top:15px; text-align:center; background:#DB4437; color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.8rem;">ABRIR DRIVE</a>
                                 </div>
                             </div>`;
                     });
@@ -1614,10 +1324,9 @@ const firebaseConfig = {
                     contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="scroll" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>Aún no has escrito historias.</p></div>';
                 } else {
                     historias.forEach((h, index) => {
-                        const portadaHistoria = convertirGoogleDriveADirecto(h.img || '') || 'https://via.placeholder.com/300x150?text=Sin+Imagen';
                         contenedor.innerHTML += `
                             <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display:flex; flex-direction:column;">
-                                <div style="height:120px; background: #eee url('${portadaHistoria}') center/cover no-repeat;"></div>
+                                <div style="height:120px; background: #eee url('${h.img || 'https://via.placeholder.com/300x150?text=Sin+Imagen'}') center/cover no-repeat;"></div>
                                 <div style="padding: 15px;">
                                     <div style="display:flex; justify-content: space-between; align-items:center;">
                                         <h3 style="margin:0; font-size: 1rem; color: var(--primary);">${h.titulo}</h3>
@@ -1633,143 +1342,9 @@ const firebaseConfig = {
             lucide.createIcons();
         };
 
-        window.actualizarContenidoAlbumDrive = async function(idPais, idProvincia = null, indexAlbum) {
-            const objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            const album = objDestino?.albumes?.[indexAlbum];
-            if (!album) return;
-            await window.cargarArchivosDriveDeAlbum(album, idPais, idProvincia);
-        };
-
-        window.abrirVisorMultimedia = function(idPais, idProvincia = null, albumIndex, itemIndex) {
-            cerrarVisorMultimedia();
-            const { items } = obtenerItemsAlbumMultimedia(idPais, idProvincia, albumIndex);
-            if (!items[itemIndex]) return;
-
-            visorMultimediaEstado = { idPais, idProvincia, albumIndex, itemIndex };
-
-            const overlay = document.createElement('div');
-            overlay.style.position = 'fixed';
-            overlay.style.inset = '0';
-            overlay.style.background = 'rgba(0,0,0,0.82)';
-            overlay.style.zIndex = '2500';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.padding = '20px';
-
-            const contenedor = document.createElement('div');
-            contenedor.style.background = '#111827';
-            contenedor.style.width = '100%';
-            contenedor.style.maxWidth = '960px';
-            contenedor.style.borderRadius = '18px';
-            contenedor.style.overflow = 'hidden';
-            contenedor.style.position = 'relative';
-            contenedor.style.padding = '20px 70px';
-            contenedor.style.color = '#fff';
-
-            const btnCerrar = document.createElement('button');
-            btnCerrar.type = 'button';
-            btnCerrar.textContent = '✕';
-            btnCerrar.style.cssText = 'position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-weight:bold;z-index:3;';
-            btnCerrar.addEventListener('click', cerrarVisorMultimedia);
-
-            const btnIzquierda = document.createElement('button');
-            btnIzquierda.type = 'button';
-            btnIzquierda.textContent = '❮';
-            btnIzquierda.style.cssText = 'position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:42px;height:42px;cursor:pointer;font-size:1.2rem;z-index:2;';
-            btnIzquierda.addEventListener('click', () => mostrarItemVisor(-1));
-
-            const btnDerecha = document.createElement('button');
-            btnDerecha.type = 'button';
-            btnDerecha.textContent = '❯';
-            btnDerecha.style.cssText = 'position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:42px;height:42px;cursor:pointer;font-size:1.2rem;z-index:2;';
-            btnDerecha.addEventListener('click', () => mostrarItemVisor(1));
-
-            const titulo = document.createElement('div');
-            titulo.style.cssText = 'font-size:0.8rem;color:#E5E7EB;margin-bottom:4px;';
-
-            const contador = document.createElement('div');
-            contador.style.cssText = 'font-size:0.85rem;color:#D1D5DB;margin-bottom:12px;';
-
-            const contenido = document.createElement('div');
-            contenido.style.display = 'flex';
-            contenido.style.justifyContent = 'center';
-            contenido.style.alignItems = 'center';
-            contenido.style.minHeight = '220px';
-
-            contenedor.append(btnCerrar, btnIzquierda, btnDerecha, titulo, contador, contenido);
-            overlay.appendChild(contenedor);
-            overlay.addEventListener('click', (event) => {
-                if (event.target === overlay) cerrarVisorMultimedia();
-            });
-            document.body.appendChild(overlay);
-
-            visorMultimediaElementos = { overlay, contenido, contador, titulo };
-            visorMultimediaHandlerTeclado = (event) => {
-                if (event.key === 'Escape') cerrarVisorMultimedia();
-                if (event.key === 'ArrowLeft') mostrarItemVisor(-1);
-                if (event.key === 'ArrowRight') mostrarItemVisor(1);
-            };
-            document.addEventListener('keydown', visorMultimediaHandlerTeclado);
-            renderizarItemVisorMultimedia();
-        };
-
-        window.mostrarItemVisor = function(delta) {
-            if (!visorMultimediaEstado) return;
-            const { items } = obtenerItemsAlbumMultimedia(
-                visorMultimediaEstado.idPais,
-                visorMultimediaEstado.idProvincia,
-                visorMultimediaEstado.albumIndex
-            );
-            if (!items.length) return;
-            const total = items.length;
-            visorMultimediaEstado.itemIndex = (visorMultimediaEstado.itemIndex + delta + total) % total;
-            renderizarItemVisorMultimedia();
-        };
-
-        window.cerrarVisorMultimedia = function() {
-            if (visorMultimediaHandlerTeclado) {
-                document.removeEventListener('keydown', visorMultimediaHandlerTeclado);
-                visorMultimediaHandlerTeclado = null;
-            }
-            if (visorMultimediaElementos?.overlay?.parentNode) {
-                visorMultimediaElementos.overlay.parentNode.removeChild(visorMultimediaElementos.overlay);
-            }
-            visorMultimediaEstado = null;
-            visorMultimediaElementos = null;
-        };
-
-        window.abrirVisorAlbumDrive = function(idPais, idProvincia = null, indexAlbum, indexItem) {
-            window.abrirVisorMultimedia(idPais, idProvincia, indexAlbum, indexItem);
-        };
-
-        window.cargarArchivosDriveDeAlbum = async function(album, idPais, idProvincia = null) {
-            const itemDrive = construirItemImagenDrive(album?.urlCarpeta || '', album?.nombre || 'Imagen de Drive');
-
-            try {
-                album.cargando = true;
-                album.errorCarga = null;
-                actualizarVistaAlbumes(idPais, idProvincia, 'drive');
-                if (!itemDrive) {
-                    throw new Error('No se pudo extraer el ID del archivo. Usa un enlace de Drive con formato /file/d/ID/view.');
-                }
-                album.items = [itemDrive];
-                album.errorCarga = null;
-            } catch (error) {
-                console.error('Error cargando archivos de Drive:', error);
-                album.items = [];
-                album.errorCarga = error?.message || 'Falló la carga de archivos de Drive.';
-            } finally {
-                album.cargando = false;
-                const objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-                objDestino.albumes = (objDestino.albumes || []).map((a) => (a.id === album.id ? album : a));
-                actualizarVistaAlbumes(idPais, idProvincia, 'drive');
-            }
-        };
-
         window.agregarHistoria = function(idPais, idProvincia = null) {
             const titulo = document.getElementById('titulo-historia').value.trim();
-            const img = convertirGoogleDriveADirecto(document.getElementById('img-historia').value.trim());
+            const img = document.getElementById('img-historia').value.trim();
             const texto = document.getElementById('texto-historia').value.trim();
             if (!titulo || !texto) { alert("Tu historia necesita al menos un título y contenido."); return; }
 
@@ -1781,13 +1356,12 @@ const firebaseConfig = {
         window.leerHistoria = function(idPais, idProvincia = null, index) {
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
             const h = objDestino.historias[index];
-            const urlImagen = convertirGoogleDriveADirecto(h.img || '');
             const modal = document.createElement('div');
             modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px;";
             modal.innerHTML = `
                 <div style="background:white; width:100%; max-width:600px; max-height:90vh; border-radius:20px; overflow-y:auto; position:relative; padding-bottom:30px;">
                     <button onclick="this.parentElement.parentElement.remove()" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; font-weight:bold; z-index:10;">X</button>
-                    <div style="width:100%; height:250px; background:url('${urlImagen}') center/cover no-repeat;"></div>
+                    <div style="width:100%; height:250px; background:url('${h.img}') center/cover no-repeat;"></div>
                     <div style="padding:30px;">
                         <span style="color:var(--primary); font-weight:bold; font-size:0.8rem;">${h.fecha}</span>
                         <h2 style="margin-top:5px; color: #263238;">${h.titulo}</h2>
@@ -1811,23 +1385,14 @@ const firebaseConfig = {
             }
         };
 
-        window.agregarCarpetaDrive = async function(idPais, idProvincia = null) {
+        window.agregarCarpetaDrive = function(idPais, idProvincia = null) {
             const nombre = document.getElementById('nombre-carpeta-drive').value.trim();
-            const urlCarpeta = document.getElementById('url-carpeta-drive').value.trim();
-            if (!nombre || !urlCarpeta) { alert("Faltan datos."); return; }
-            const itemDrive = construirItemImagenDrive(urlCarpeta, nombre);
-            if (!itemDrive) { alert("Link no válido. Usa un enlace de archivo de Google Drive."); return; }
+            const url = document.getElementById('url-carpeta-drive').value.trim();
+            if (!nombre || !url) { alert("Faltan datos."); return; }
+            if (!url.includes('drive.google.com')) { alert("Link no válido."); return; }
 
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            const nuevoAlbum = {
-                id: `alb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                nombre,
-                urlCarpeta: convertirGoogleDriveADirecto(urlCarpeta),
-                items: [itemDrive],
-                cargando: false,
-                errorCarga: null
-            };
-            objDestino.albumes.push(nuevoAlbum);
+            objDestino.albumes.push({ nombre, url });
             actualizarVistaAlbumes(idPais, idProvincia, 'drive');
         };
 
@@ -2284,7 +1849,7 @@ const firebaseConfig = {
             });
             lucide.createIcons();
         };
-        document.addEventListener("DOMContentLoaded", iniciarSincronizacionFirebase);
+        document.addEventListener("DOMContentLoaded", cargarMapa);
     </script>
 </body>
 </html>
