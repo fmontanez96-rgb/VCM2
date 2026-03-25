@@ -1404,14 +1404,18 @@ const firebaseConfig = {
                     contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="folder-x" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>No hay carpetas compartidas aún.</p></div>';
                 } else {
                     albumes.forEach((album, index) => {
+                        const nombreAlbum = album?.nombre || 'Álbum sin nombre';
+                        const urlCarpeta = album?.urlCarpeta || album?.url || '#';
+                        const itemsAlbum = Array.isArray(album?.items) ? album.items : [];
                         contenedor.innerHTML += `
                             <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 5px solid var(--secondary);">
                                 <div style="padding: 15px;">
                                     <div style="display:flex; justify-content: space-between;">
-                                        <h3 style="margin:0; font-size: 1rem;">${album.nombre}</h3>
+                                        <h3 style="margin:0; font-size: 1rem;">${nombreAlbum}</h3>
                                         <button onclick="eliminarMemoria('${idPais}', ${paramProv}, ${index}, 'drive')" style="background:none; border:none; color: #EF5350; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
                                     </div>
-                                    <a href="${album.url}" target="_blank" style="display:block; margin-top:15px; text-align:center; background:#DB4437; color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.8rem;">ABRIR DRIVE</a>
+                                    <p style="margin:10px 0 0; font-size:0.75rem; color:#78909C;">${itemsAlbum.length} archivo(s)</p>
+                                    <a href="${urlCarpeta}" target="_blank" style="display:block; margin-top:15px; text-align:center; background:#DB4437; color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.8rem;">ABRIR DRIVE</a>
                                 </div>
                             </div>`;
                     });
@@ -1485,12 +1489,17 @@ const firebaseConfig = {
 
         window.agregarCarpetaDrive = function(idPais, idProvincia = null) {
             const nombre = document.getElementById('nombre-carpeta-drive').value.trim();
-            const url = document.getElementById('url-carpeta-drive').value.trim();
-            if (!nombre || !url) { alert("Faltan datos."); return; }
-            if (!url.includes('drive.google.com')) { alert("Link no válido."); return; }
+            const urlCarpeta = document.getElementById('url-carpeta-drive').value.trim();
+            if (!nombre || !urlCarpeta) { alert("Faltan datos."); return; }
+            if (!urlCarpeta.includes('drive.google.com')) { alert("Link no válido."); return; }
 
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            objDestino.albumes.push({ nombre, url });
+            objDestino.albumes.push({
+                id: `alb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                nombre,
+                urlCarpeta,
+                items: []
+            });
             actualizarVistaAlbumes(idPais, idProvincia, 'drive');
         };
 
