@@ -150,6 +150,10 @@
         .info-pais { display: flex; align-items: center; gap: 15px; }
         .icono-bandera { width: 50px; height: 50px; background: #E1F5FE; color: var(--secondary); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
         .nombre-pais-lista { font-size: 1.4rem; font-weight: 800; color: #455A64; margin: 0; }
+        .destino-principal { margin: 0; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase; }
+        .destino-principal.dorado { color: #FFB300; font-size: 1.65rem; text-shadow: 1px 1px 0 #FFE082; }
+        .destino-principal.rosa { color: #FF4081; font-size: 1.85rem; text-shadow: 1px 1px 0 #F8BBD0; }
+        .destino-escalas { margin-top: 4px; font-size: 0.95rem; color: #90A4AE; font-weight: 600; }
         .zonas-badge { background: #FCE4EC; color: #D81B60; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 5px; display: inline-block; }
 
         .btn-accion-pais { 
@@ -935,11 +939,16 @@ const firebaseConfig = {
                     const pais = destinosSonados[id];
                     const numItems = Array.isArray(pais.itinerario) ? pais.itinerario.length : 0;
                     const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
+                    const escalasResumen = obtenerResumenEscalas(pais);
                     listaHTML.innerHTML += `
                         <div class="tarjeta-pais">
                             <div class="info-pais">
                                 <div class="icono-bandera" style="background: #FFF8E1; color: #FFB300;"><i data-lucide="star"></i></div>
-                                <div><h3 class="nombre-pais-lista">${nombrePrincipal}</h3><span class="zonas-badge">${numItems} pasos</span></div>
+                                <div>
+                                    <h3 class="destino-principal dorado">${nombrePrincipal}</h3>
+                                    ${escalasResumen ? `<div class="destino-escalas">(${escalasResumen})</div>` : ''}
+                                    <span class="zonas-badge">${numItems} pasos</span>
+                                </div>
                             </div>
                             <button class="btn-accion-pais secundario" onclick="abrirPlanificador('${id}')">Ver Itinerario <i data-lucide="calendar"></i></button>
                         </div>`;
@@ -1751,12 +1760,7 @@ const firebaseConfig = {
             }
 
             const nombrePrincipal = obtenerNombreCabeceraDestino(pais);
-
-            let nombreVisual = `<span style="color: #FF4081;">${nombrePrincipal}</span>`;
-            const listaEscalas = pais.escalasCiudades && pais.escalasCiudades.length > 0 ? pais.escalasCiudades : (pais.escalas || []);
-            if (listaEscalas.length > 0) {
-                nombreVisual += ` <span style="font-size: 1rem; color: #78909C; font-weight: 500;">(${listaEscalas.join(', ').toUpperCase()})</span>`;
-            }
+            const escalasResumen = obtenerResumenEscalas(pais);
 
             scrollArea.innerHTML = `
                 <div class="cabecera-detalle">
@@ -1764,7 +1768,14 @@ const firebaseConfig = {
                         <button class="btn-volver" onclick="renderizarPantallaSonados()" title="Volver a la lista">
                             <i data-lucide="arrow-left"></i>
                         </button>
-                        <h2 style="font-size: 1.6rem; margin:0;">ITINERARIO: ${nombreVisual} 🌍</h2>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom: 4px;">
+                                <span style="font-size: 1.6rem; font-weight: 900; color:#FF4081;">ITINERARIO:</span>
+                                <h2 class="destino-principal rosa" style="margin:0;">${nombrePrincipal}</h2>
+                                <span style="font-size: 1.4rem;">🌍</span>
+                            </div>
+                            ${escalasResumen ? `<div class="destino-escalas">(${escalasResumen})</div>` : ''}
+                        </div>
                     </div>
                     
                     <button id="btn-borrar-iti" class="btn-borrar-itinerario" onclick="borrarItinerarioCompleto('${idPais}')" data-confirm="false" title="Eliminar todo el itinerario de este país">
@@ -1795,9 +1806,27 @@ const firebaseConfig = {
         window.manual_Restaurante = (btn) => mostrarFormularioItinerario('restaurante', btn);
 
         function obtenerNombreCabeceraDestino(pais) {
-            const nombrePais = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
             const nombreCiudad = (pais.ciudadDestinoFinal || "").toUpperCase();
-            return nombreCiudad ? `${nombrePais}, ${nombreCiudad}` : nombrePais;
+            const nombrePais = (pais.destinoFinal || pais.nombre || "Destino").toUpperCase();
+            return nombreCiudad ? `${nombreCiudad}, ${nombrePais}` : nombrePais;
+        }
+
+        function obtenerResumenEscalas(pais) {
+            const viajes = Array.isArray(pais.itinerario) ? pais.itinerario.filter(item => item && item.tipo === 'viaje') : [];
+            const paisesConCiudades = new Map();
+
+            viajes.forEach(viaje => {
+                const nombrePais = (viaje.destino || '').trim();
+                const nombreCiudad = (viaje.ciudad || '').trim();
+                if (!nombrePais || !nombreCiudad) return;
+
+                if (!paisesConCiudades.has(nombrePais)) paisesConCiudades.set(nombrePais, new Set());
+                paisesConCiudades.get(nombrePais).add(nombreCiudad);
+            });
+
+            return Array.from(paisesConCiudades.entries())
+                .map(([nombrePais, ciudades]) => ciudades.size > 1 ? nombrePais.toUpperCase() : Array.from(ciudades)[0].toUpperCase())
+                .join(', ');
         }
 
         window.cargarCiudadesEscalaViaje = function() {
@@ -1958,7 +1987,6 @@ const firebaseConfig = {
                 if (ciudadEscala) {
                     const ciudadNormalizada = ciudadEscala.toUpperCase();
                     if (!dataPais.escalasCiudades.includes(ciudadNormalizada)) dataPais.escalasCiudades.push(ciudadNormalizada);
-                    dataPais.ciudadDestinoFinal = ciudadNormalizada;
                 }
             } else if (tipo === 'hospedaje') {
                 nuevoItem.hotel = document.getElementById('input-hospedaje-nombre').value || 'Alojamiento';
