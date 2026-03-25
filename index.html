@@ -429,21 +429,8 @@ const firebaseConfig = {
             ARG: ["Obelisco de Buenos Aires", "Cataratas del Iguazú", "Glaciar Perito Moreno", "Teatro Colón", "Quebrada de Humahuaca"],
             BRA: ["Cristo Redentor", "Pan de Azúcar", "Cataratas del Iguazú", "Centro histórico de Salvador", "Lençóis Maranhenses"],
             MEX: ["Chichén Itzá", "Teotihuacán", "Palacio de Bellas Artes", "Cenotes de Yucatán", "Monte Albán"],
-            JPN: ["Monte Fuji", "Templo Sensō-ji", "Santuario Fushimi Inari", "Castillo de Osaka", "Bosque de bambú de Arashiyama"],
-            SAU: ["Al-Ula (Hegra)", "Kingdom Centre (Riad)", "Fortaleza de Masmak", "Jeddah Corniche", "Borde del Mundo (Jebel Fihrayn)"],
-            ARE: ["Burj Khalifa", "Gran Mezquita Sheikh Zayed", "Museo del Futuro", "Palm Jumeirah", "Dubai Creek"],
-            EGY: ["Pirámides de Giza", "Templos de Luxor", "Valle de los Reyes", "Museo Egipcio", "Biblioteca de Alejandría"],
-            TUR: ["Santa Sofía", "Capadocia", "Palacio Topkapi", "Pamukkale", "Mezquita Azul"],
-            IND: ["Taj Mahal", "Fuerte Amber", "Puerta de la India", "Palacio de Mysore", "Ghats de Varanasi"],
-            CHN: ["Gran Muralla China", "Ciudad Prohibida", "Ejército de Terracota", "Bund de Shanghái", "Montañas Zhangjiajie"]
+            JPN: ["Monte Fuji", "Templo Sensō-ji", "Santuario Fushimi Inari", "Castillo de Osaka", "Bosque de bambú de Arashiyama"]
         };
-        const plantillasFallbackInteres = [
-            (pais) => `Casco antiguo de ${pais}`,
-            (pais) => `Museo nacional de ${pais}`,
-            (pais) => `Monumento emblemático de ${pais}`,
-            (pais) => `Mirador panorámico de ${pais}`,
-            (pais) => `Parque natural destacado de ${pais}`
-        ];
 
         function obtenerEstadoActual() {
             return {
@@ -812,9 +799,7 @@ const firebaseConfig = {
         function obtenerLugaresInteres(nombrePais, idPais) {
             const lugaresConocidos = lugaresInteresPorPais[idPais] || [];
             if (lugaresConocidos.length > 0) return lugaresConocidos.slice(0, 5);
-            return plantillasFallbackInteres
-                .map((crearLugar) => crearLugar(nombrePais))
-                .slice(0, 5);
+            return [`Centro histórico de ${nombrePais}`];
         }
 
         function mostrarCartelInteres(nombrePais, idPais) {
