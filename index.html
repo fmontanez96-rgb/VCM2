@@ -205,6 +205,24 @@
             cursor: pointer;
         }
         #cerrar-cartel-interes:hover { background: #00BCD4; color: white; }
+        #indicador-sync {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 1700;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #B3E5FC;
+            color: #006064;
+            border-radius: 14px;
+            padding: 8px 12px;
+            font-size: 0.88rem;
+            font-weight: 800;
+            box-shadow: 0 6px 16px rgba(0, 188, 212, 0.2);
+            max-width: min(300px, calc(100% - 32px));
+        }
+        #indicador-sync.estado-sync-sincronizando { border-color: #29B6F6; color: #0277BD; }
+        #indicador-sync.estado-sync-guardado { border-color: #66BB6A; color: #2E7D32; }
+        #indicador-sync.estado-sync-error { border-color: #EF5350; color: #C62828; }
         .menu-oculto { display: none; }
         .menu-visible { display: block; animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
         @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -386,6 +404,7 @@
         <main class="contenido-principal">
             <div id="vista-explora" class="pantalla pantalla-activa">
                 <div id="world-map"></div>
+                <div id="indicador-sync" class="estado-sync-guardado">Guardado</div>
                 <div id="tooltip" class="tooltip-oculto"><span id="tooltip-nombre"></span></div>
                 <div id="menu-contextual" class="menu-oculto"></div>
                 <div id="cartel-interes" class="cartel-interes-oculto"></div>
@@ -417,6 +436,11 @@ const firebaseConfig = {
         let estadoInicialSincronizado = false;
         let ultimaHuellaSincronizada = "";
         let intervaloAutosave = null;
+        let ultimoErrorSync = null;
+        let referenciaEstadoFirebase = null;
+        let listenerEstadoFirebase = null;
+        let timeoutReintentoSync = null;
+        const beforeUnloadSyncHandler = () => guardarEstadoEnFirebase(true);
         const RUTA_ESTADO_FIREBASE = "nuestraHistoria/estadoCompartido";
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
         const lugaresInteresPorPais = {
@@ -518,6 +542,56 @@ const firebaseConfig = {
             });
         }
 
+        function actualizarIndicadorSync(estado, detalle = "") {
+            const indicador = document.getElementById("indicador-sync");
+            if (!indicador) return;
+
+            indicador.classList.remove("estado-sync-sincronizando", "estado-sync-guardado", "estado-sync-error");
+            if (estado === "sincronizando") {
+                indicador.classList.add("estado-sync-sincronizando");
+                indicador.textContent = "Sincronizando…";
+                return;
+            }
+            if (estado === "error") {
+                indicador.classList.add("estado-sync-error");
+                indicador.textContent = detalle ? `Error al guardar: ${detalle}` : "Error al guardar";
+                return;
+            }
+
+            indicador.classList.add("estado-sync-guardado");
+            indicador.textContent = "Guardado";
+        }
+
+        function limpiarSincronizacionFirebase() {
+            if (intervaloAutosave) {
+                clearInterval(intervaloAutosave);
+                intervaloAutosave = null;
+            }
+
+            if (timeoutReintentoSync) {
+                clearTimeout(timeoutReintentoSync);
+                timeoutReintentoSync = null;
+            }
+
+            if (referenciaEstadoFirebase && listenerEstadoFirebase) {
+                referenciaEstadoFirebase.off("value", listenerEstadoFirebase);
+            } else if (referenciaEstadoFirebase) {
+                referenciaEstadoFirebase.off("value");
+            }
+
+            referenciaEstadoFirebase = null;
+            listenerEstadoFirebase = null;
+            window.removeEventListener("beforeunload", beforeUnloadSyncHandler);
+        }
+
+        function programarReintentoSincronizacion() {
+            if (timeoutReintentoSync) return;
+            timeoutReintentoSync = setTimeout(() => {
+                timeoutReintentoSync = null;
+                iniciarSincronizacionFirebase();
+            }, 3000);
+        }
+
         function guardarEstadoEnFirebase(forzar = false) {
             if (!firebaseDb || !estadoInicialSincronizado) return;
 
@@ -525,23 +599,30 @@ const firebaseConfig = {
             const huellaActual = calcularHuellaEstado(estado);
             if (!forzar && huellaActual === ultimaHuellaSincronizada) return;
 
+            actualizarIndicadorSync("sincronizando");
             firebaseDb.ref(RUTA_ESTADO_FIREBASE).set(estado)
                 .then(() => {
                     ultimaHuellaSincronizada = huellaActual;
+                    ultimoErrorSync = null;
+                    actualizarIndicadorSync("guardado");
                 })
                 .catch((error) => {
                     console.error("No se pudo guardar en Firebase:", error);
+                    ultimoErrorSync = error;
+                    actualizarIndicadorSync("error", error?.message ? String(error.message).slice(0, 80) : "");
                 });
         }
 
         function iniciarSincronizacionFirebase() {
+            limpiarSincronizacionFirebase();
             try {
                 if (!firebase.apps.length) {
                     firebase.initializeApp(firebaseConfig);
                 }
                 firebaseDb = firebase.database();
+                referenciaEstadoFirebase = firebaseDb.ref(RUTA_ESTADO_FIREBASE);
 
-                firebaseDb.ref(RUTA_ESTADO_FIREBASE).on("value", (snapshot) => {
+                listenerEstadoFirebase = (snapshot) => {
                     const estadoRemoto = snapshot.val();
                     if (estadoRemoto) {
                         const huellaRemota = calcularHuellaEstado(estadoRemoto);
@@ -558,16 +639,26 @@ const firebaseConfig = {
                     }
 
                     estadoInicialSincronizado = true;
-                }, (error) => {
+                    ultimoErrorSync = null;
+                    actualizarIndicadorSync("guardado");
+                };
+
+                referenciaEstadoFirebase.on("value", listenerEstadoFirebase, (error) => {
                     console.error("Error al leer estado desde Firebase:", error);
+                    ultimoErrorSync = error;
+                    actualizarIndicadorSync("error", "sin conexión");
+                    programarReintentoSincronizacion();
                     estadoInicialSincronizado = true;
                     cargarMapa();
                 });
 
                 intervaloAutosave = setInterval(() => guardarEstadoEnFirebase(), 1200);
-                window.addEventListener("beforeunload", () => guardarEstadoEnFirebase(true));
+                window.addEventListener("beforeunload", beforeUnloadSyncHandler);
             } catch (error) {
                 console.error("No se pudo inicializar Firebase:", error);
+                ultimoErrorSync = error;
+                actualizarIndicadorSync("error", "inicio fallido");
+                programarReintentoSincronizacion();
                 estadoInicialSincronizado = true;
                 cargarMapa();
             }
