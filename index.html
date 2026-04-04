@@ -420,8 +420,10 @@ const firebaseConfig = {
         let intervaloAutosave = null;
         let rutaEstadoFirebase = null;
 
-        function obtenerRutaEstadoFirebase(uid) {
-            return `nuestraHistoria/usuarios/${uid}/estadoCompartido`;
+        const RUTA_ESTADO_COMPARTIDO = "nuestraHistoria/estadoCompartido";
+
+        function obtenerRutaEstadoFirebase(uid = "") {
+            return RUTA_ESTADO_COMPARTIDO;
         }
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
         const lugaresInteresPorPais = {
@@ -552,8 +554,7 @@ const firebaseConfig = {
                     if (!usuario) {
                         auth.signInAnonymously().catch((error) => {
                             console.error("No se pudo iniciar sesión anónima en Firebase:", error);
-                            estadoInicialSincronizado = true;
-                            cargarMapa();
+                            sincronizarEstadoConRutaPublica();
                         });
                         return;
                     }
@@ -596,6 +597,47 @@ const firebaseConfig = {
                 console.error("No se pudo inicializar Firebase:", error);
                 estadoInicialSincronizado = true;
                 cargarMapa();
+            }
+        }
+
+        function sincronizarEstadoConRutaPublica() {
+            if (!firebaseDb) {
+                estadoInicialSincronizado = true;
+                cargarMapa();
+                renderizarPantallaRecuerdos();
+                renderizarPantallaSonados();
+                return;
+            }
+
+            const rutaPublica = obtenerRutaEstadoFirebase();
+            if (rutaEstadoFirebase && rutaEstadoFirebase !== rutaPublica) {
+                firebaseDb.ref(rutaEstadoFirebase).off("value");
+            }
+            rutaEstadoFirebase = rutaPublica;
+
+            firebaseDb.ref(rutaEstadoFirebase).on("value", (snapshot) => {
+                const estadoRemoto = snapshot.val();
+                if (estadoRemoto) {
+                    const huellaRemota = calcularHuellaEstado(estadoRemoto);
+                    if (huellaRemota !== ultimaHuellaSincronizada) {
+                        ultimaHuellaSincronizada = huellaRemota;
+                        aplicarEstadoRemoto(estadoRemoto);
+                    }
+                } else {
+                    cargarMapa();
+                    renderizarPantallaRecuerdos();
+                    renderizarPantallaSonados();
+                }
+                estadoInicialSincronizado = true;
+            }, (error) => {
+                console.error("Error al leer estado público desde Firebase:", error);
+                estadoInicialSincronizado = true;
+                cargarMapa();
+            });
+
+            if (!intervaloAutosave) {
+                intervaloAutosave = setInterval(() => guardarEstadoEnFirebase(), 1200);
+                window.addEventListener("beforeunload", () => guardarEstadoEnFirebase(true));
             }
         }
 
