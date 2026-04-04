@@ -414,6 +414,7 @@ const firebaseConfig = {
         let paisesVisitados = {};
         let provinciasVisitadas = {}; 
         let destinosSonados = {}; 
+        let estadoVistaRecuerdos = { modo: 'lista', idPais: null, idProvincia: null };
         let firebaseDb = null;
         let estadoInicialSincronizado = false;
         let ultimaHuellaSincronizada = "";
@@ -518,8 +519,28 @@ const firebaseConfig = {
             destinosSonados = estado?.destinosSonados || {};
             normalizarDestinosSonados();
             cargarMapa();
-            renderizarPantallaRecuerdos();
-            renderizarPantallaSonados();
+
+            const vistaRecuerdosActiva = document.getElementById('vista-vividas')?.classList.contains('pantalla-activa');
+            const vistaSonadosActiva = document.getElementById('vista-por-vivir')?.classList.contains('pantalla-activa');
+
+            if (vistaRecuerdosActiva) {
+                if (estadoVistaRecuerdos.modo === 'detalle' && estadoVistaRecuerdos.idPais && paisesVisitados[estadoVistaRecuerdos.idPais]) {
+                    const provinciaExiste = estadoVistaRecuerdos.idProvincia && provinciasVisitadas[estadoVistaRecuerdos.idPais]?.[estadoVistaRecuerdos.idProvincia];
+                    if (estadoVistaRecuerdos.idProvincia && provinciaExiste) {
+                        abrirAlbumDetalle(estadoVistaRecuerdos.idPais, estadoVistaRecuerdos.idProvincia);
+                    } else {
+                        abrirAlbum(estadoVistaRecuerdos.idPais);
+                    }
+                } else if (estadoVistaRecuerdos.modo === 'provincias' && estadoVistaRecuerdos.idPais && paisesVisitados[estadoVistaRecuerdos.idPais]) {
+                    abrirAlbum(estadoVistaRecuerdos.idPais);
+                } else {
+                    renderizarPantallaRecuerdos();
+                }
+            }
+
+            if (vistaSonadosActiva) {
+                renderizarPantallaSonados();
+            }
         }
 
         function normalizarDestinosSonados() {
@@ -1305,6 +1326,7 @@ const firebaseConfig = {
         }
 
         window.renderizarPantallaRecuerdos = function() {
+            estadoVistaRecuerdos = { modo: 'lista', idPais: null, idProvincia: null };
             const contenedor = document.getElementById('vista-vividas');
             const idsPaises = Object.keys(paisesVisitados);
 
@@ -1491,10 +1513,15 @@ const firebaseConfig = {
 
         window.abrirAlbum = function(idPais, idProvincia = null) {
             const pais = paisesVisitados[idPais];
+            if (!pais) {
+                renderizarPantallaRecuerdos();
+                return;
+            }
             const scrollArea = document.getElementById('scroll-recuerdos');
 
             // Si NO hay provincia seleccionada, siempre mostramos el menú de provincias (eliminamos el acceso general)
             if (!idProvincia) {
+                estadoVistaRecuerdos = { modo: 'provincias', idPais, idProvincia: null };
                 const provs = provinciasVisitadas[idPais] || {};
                 const idsProvincias = Object.keys(provs);
 
@@ -1643,11 +1670,22 @@ const firebaseConfig = {
 
         window.abrirAlbumDetalle = function(idPais, idProvincia) {
             const pais = paisesVisitados[idPais];
+            if (!pais) {
+                renderizarPantallaRecuerdos();
+                return;
+            }
+
+            estadoVistaRecuerdos = { modo: 'detalle', idPais, idProvincia: idProvincia || null };
             let objDestino = pais;
             let nombreTitulo = pais.nombre;
 
             if (idProvincia) {
-                objDestino = provinciasVisitadas[idPais][idProvincia];
+                const provincia = provinciasVisitadas[idPais]?.[idProvincia];
+                if (!provincia) {
+                    abrirAlbum(idPais);
+                    return;
+                }
+                objDestino = provincia;
                 nombreTitulo = `${objDestino.nombre} (${pais.nombre})`;
             }
 
