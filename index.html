@@ -489,12 +489,27 @@ const firebaseConfig = {
             };
         }
 
+        function serializarEstable(valor) {
+            if (Array.isArray(valor)) {
+                return valor.map(item => serializarEstable(item));
+            }
+            if (valor && typeof valor === "object") {
+                return Object.keys(valor)
+                    .sort()
+                    .reduce((acumulado, clave) => {
+                        acumulado[clave] = serializarEstable(valor[clave]);
+                        return acumulado;
+                    }, {});
+            }
+            return valor;
+        }
+
         function calcularHuellaEstado(estado = obtenerEstadoActual()) {
-            return JSON.stringify({
+            return JSON.stringify(serializarEstable({
                 paisesVisitados: estado.paisesVisitados || {},
                 provinciasVisitadas: estado.provinciasVisitadas || {},
                 destinosSonados: estado.destinosSonados || {}
-            });
+            }));
         }
 
         function aplicarEstadoRemoto(estado) {
