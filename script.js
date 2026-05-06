@@ -2116,40 +2116,40 @@ const firebaseConfig = {
             const nombrePais = idProvincia ? pais.nombre : '';
             const nombreLeyendaMusica = (idProvincia ? objDestino.nombre : pais.nombre || nombreTitulo).trim();
             const bloqueNuevo = submodoActual === 'nuevo' ? `
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; background: #f1f5f9; padding: 5px; border-radius: 12px;">
-                    <button id="tab-drive" onclick="cambiarSeccionRecuerdos('drive', '${idPais}', ${paramProv})" style="flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background: var(--secondary); color:white;">
-                        <i data-lucide="folder" style="width:16px; vertical-align:middle;"></i> Drive
+                <div class="tabs-agregar-memoria-metal">
+                    <button id="tab-drive" class="btn-subtab-memoria-metal btn-subtab-drive activo" onclick="cambiarSeccionRecuerdos('drive', '${idPais}', ${paramProv})">
+                        <i data-lucide="folder"></i> Drive
                     </button>
-                    <button id="tab-historias" onclick="cambiarSeccionRecuerdos('historias', '${idPais}', ${paramProv})" style="flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:transparent; color:#546E7A;">
-                        <i data-lucide="book-open" style="width:16px; vertical-align:middle;"></i> Historias
+                    <button id="tab-historias" class="btn-subtab-memoria-metal btn-subtab-historia" onclick="cambiarSeccionRecuerdos('historias', '${idPais}', ${paramProv})">
+                        <i data-lucide="book-open"></i> Historias
                     </button>
                 </div>
 
-                <div id="form-drive" style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E1F5FE;">
-                    <h4 style="margin-top:0; color: var(--secondary); display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle"></i> Agregar Nueva Carpeta</h4>
-                    <div style="display:flex; flex-direction: column; gap:10px;">
-                        <input type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Fotos del Hotel)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                        <input type="text" id="portada-drive-url" placeholder="URL de portada (opcional)" style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                        <label style="font-size:0.9rem; color:#546E7A; font-weight:700;">o subir portada desde tu PC:
-                            <input type="file" id="portada-drive-file" accept="image/*" style="display:block; margin-top:6px; width:100%;">
+                <div id="form-drive" class="form-memoria-metal form-memoria-drive">
+                    <h4 class="titulo-form-memoria-metal titulo-form-drive"><i data-lucide="plus-circle"></i> Agregar Nueva Carpeta</h4>
+                    <div class="campos-memoria-metal">
+                        <input class="campo-memoria-metal" type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Fotos del Hotel)">
+                        <input class="campo-memoria-metal" type="text" id="portada-drive-url" placeholder="URL de portada (opcional)">
+                        <label class="label-memoria-metal">o subir portada desde tu PC:
+                            <input class="campo-archivo-memoria-metal" type="file" id="portada-drive-file" accept="image/*">
                         </label>
-                        <div style="display:flex; gap:10px;">
-                            <input type="text" id="url-carpeta-drive" placeholder="Link de Drive..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                            <button onclick="agregarCarpetaDrive('${idPais}', ${paramProv})" style="background: var(--secondary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold;"><i data-lucide="save"></i></button>
+                        <div class="fila-guardar-memoria-metal">
+                            <input class="campo-memoria-metal campo-memoria-flex" type="text" id="url-carpeta-drive" placeholder="Link de Drive...">
+                            <button class="btn-guardar-memoria-metal btn-guardar-drive" onclick="agregarCarpetaDrive('${idPais}', ${paramProv})"><i data-lucide="save"></i></button>
                         </div>
                     </div>
                 </div>
 
-                <div id="form-historias" style="display:none; background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #FCE4EC;">
-                    <h4 style="margin-top:0; color: var(--primary); display:flex; align-items:center; gap:8px;"><i data-lucide="pen-tool"></i> Escribir una Anécdota</h4>
-                    <div style="display:flex; flex-direction: column; gap:10px;">
-                        <input type="text" id="titulo-historia" placeholder="Título de la historia..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                        <input type="text" id="img-historia" placeholder="URL de la imagen de portada..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit;">
-                        <label style="font-size:0.9rem; color:#546E7A; font-weight:700;">o subir portada desde tu PC:
-                            <input type="file" id="img-historia-file" accept="image/*" style="display:block; margin-top:6px; width:100%;">
+                <div id="form-historias" class="form-memoria-metal form-memoria-historia oculto">
+                    <h4 class="titulo-form-memoria-metal titulo-form-historia"><i data-lucide="pen-tool"></i> Escribir una Anécdota</h4>
+                    <div class="campos-memoria-metal">
+                        <input class="campo-memoria-metal" type="text" id="titulo-historia" placeholder="Título de la historia...">
+                        <input class="campo-memoria-metal" type="text" id="img-historia" placeholder="URL de la imagen de portada...">
+                        <label class="label-memoria-metal">o subir portada desde tu PC:
+                            <input class="campo-archivo-memoria-metal" type="file" id="img-historia-file" accept="image/*">
                         </label>
-                        <textarea id="texto-historia" placeholder="Cuéntame qué pasó en este viaje..." style="padding:12px; border-radius:10px; border:1px solid #CFD8DC; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
-                        <button onclick="agregarHistoria('${idPais}', ${paramProv})" style="background: var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold; align-self: flex-end;">Guardar Historia</button>
+                        <textarea class="campo-memoria-metal textarea-memoria-metal" id="texto-historia" placeholder="Cuéntame qué pasó en este viaje..."></textarea>
+                        <button class="btn-guardar-memoria-metal btn-guardar-historia" onclick="agregarHistoria('${idPais}', ${paramProv})">Guardar Historia</button>
                     </div>
                 </div>
             ` : '';
@@ -2431,13 +2431,15 @@ const firebaseConfig = {
             estadoVistaRecuerdos.seccionNuevo = tipo === 'historias' ? 'historias' : 'drive';
 
             if (tipo === 'drive') {
-                btnDrive.style.background = 'var(--secondary)'; btnDrive.style.color = 'white';
-                btnHistorias.style.background = 'transparent'; btnHistorias.style.color = '#546E7A';
-                formDrive.style.display = 'block'; formHistorias.style.display = 'none';
+                btnDrive?.classList.add('activo');
+                btnHistorias?.classList.remove('activo');
+                formDrive?.classList.remove('oculto');
+                formHistorias?.classList.add('oculto');
             } else {
-                btnHistorias.style.background = 'var(--primary)'; btnHistorias.style.color = 'white';
-                btnDrive.style.background = 'transparent'; btnDrive.style.color = '#546E7A';
-                formDrive.style.display = 'none'; formHistorias.style.display = 'block';
+                btnHistorias?.classList.add('activo');
+                btnDrive?.classList.remove('activo');
+                formDrive?.classList.add('oculto');
+                formHistorias?.classList.remove('oculto');
             }
             actualizarVistaAlbumes(idPais, idProvincia, tipo);
         };
