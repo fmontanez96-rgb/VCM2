@@ -5068,6 +5068,46 @@ const firebaseConfig = {
             return 'image';
         }
 
+        function construirMiniaturaRevivir(item, index) {
+            const etiqueta = item.tipo === 'video' ? `Video ${index + 1}` : `Imagen ${index + 1}`;
+            const icono = obtenerIconoMediaRevivir(item.tipo);
+            const url = escaparHtml(item.url);
+            const claseActiva = index === indiceMediaRevivirActual ? ' activo' : '';
+
+            if (item.tipo === 'video') {
+                return `
+                    <button type="button" class="revivir-item revivir-miniatura${claseActiva}" aria-label="${etiqueta}" onclick="seleccionarMediaRevivir(${index})">
+                        <video class="revivir-miniatura-media" src="${url}" muted preload="metadata" playsinline></video>
+                        <span class="revivir-miniatura-icono"><i data-lucide="${icono}"></i></span>
+                    </button>
+                `;
+            }
+
+            return `
+                <button type="button" class="revivir-item revivir-miniatura${claseActiva}" aria-label="${etiqueta}" onclick="seleccionarMediaRevivir(${index})">
+                    <img class="revivir-miniatura-media" src="${url}" alt="${etiqueta}" loading="lazy">
+                    <span class="revivir-miniatura-icono"><i data-lucide="${icono}"></i></span>
+                </button>
+            `;
+        }
+
+        window.cerrarModalRevivir = function() {
+            document.getElementById('revivir-modal-fondo')?.remove();
+            document.body.classList.remove('sin-scroll');
+        };
+
+        function abrirModalRevivir(contenido) {
+            cerrarModalRevivir();
+            const modal = document.createElement('div');
+            modal.id = 'revivir-modal-fondo';
+            modal.className = 'revivir-modal-fondo';
+            modal.innerHTML = contenido;
+            document.body.appendChild(modal);
+            document.body.classList.add('sin-scroll');
+            lucide.createIcons();
+            modal.querySelector('input, button, textarea, select')?.focus();
+        }
+
         function seleccionarMediaRevivir(index) {
             sincronizarBibliotecaDesdeCarpetaRevivir();
             const media = bibliotecaRevivir[index];
@@ -5081,10 +5121,10 @@ const firebaseConfig = {
 
             if (!img || !video || !titulo || !meta) return;
 
-            titulo.textContent = media.nombre;
             const carpeta = obtenerCarpetaRevivirActiva();
+            titulo.textContent = carpeta ? carpeta.nombre : 'Vista previa';
             const textoTamano = media.size ? ` · ${(media.size / 1024 / 1024).toFixed(2)} MB` : '';
-            meta.textContent = `${media.tipo === 'video' ? 'Video' : 'Imagen'}${textoTamano}${carpeta ? ` · ${carpeta.ciudad}, ${carpeta.pais}` : ''}`;
+            meta.textContent = `${media.tipo === 'video' ? 'Video' : 'Imagen'} ${index + 1}${textoTamano}${carpeta ? ` · ${carpeta.ciudad}, ${carpeta.pais}` : ''}`;
 
             if (media.tipo === 'video') {
                 img.hidden = true;
@@ -5097,7 +5137,7 @@ const firebaseConfig = {
                 video.hidden = true;
                 img.hidden = false;
                 img.src = media.url;
-                img.alt = media.nombre;
+                img.alt = 'Vista previa de Revivir';
             }
 
             renderizarArchivosRevivir();
@@ -5160,12 +5200,7 @@ const firebaseConfig = {
                 return;
             }
 
-            contenedor.innerHTML = bibliotecaRevivir.map((item, index) => `
-                <button type="button" class="revivir-item ${index === indiceMediaRevivirActual ? 'activo' : ''}" onclick="seleccionarMediaRevivir(${index})">
-                    <i data-lucide="${obtenerIconoMediaRevivir(item.tipo)}"></i>
-                    <span class="revivir-item-texto">${escaparHtml(item.nombre)}</span>
-                </button>
-            `).join('');
+            contenedor.innerHTML = bibliotecaRevivir.map((item, index) => construirMiniaturaRevivir(item, index)).join('');
             lucide.createIcons();
         }
 
@@ -5179,30 +5214,67 @@ const firebaseConfig = {
         };
 
         window.crearCarpetaMemoriaRevivir = function() {
-            const nombre = window.prompt('Nombre de la carpeta:');
-            if (!nombre?.trim()) return;
-            const portadaUrl = window.prompt('URL de portada de la carpeta:');
-            if (!/^https?:\/\//i.test(String(portadaUrl || '').trim())) {
-                alert('La portada debe ser una URL válida que empiece con http:// o https://.');
+            abrirModalRevivir(`
+                <div class="revivir-modal-contenido" role="dialog" aria-modal="true" aria-labelledby="revivir-modal-carpeta-titulo">
+                    <button type="button" class="revivir-modal-cerrar" aria-label="Cerrar" onclick="cerrarModalRevivir()">×</button>
+                    <div class="revivir-modal-header">
+                        <i data-lucide="folder-plus"></i>
+                        <div>
+                            <h3 id="revivir-modal-carpeta-titulo">Crear carpeta</h3>
+                            <p>Guardá un viaje o recuerdo con la misma estética de Revivir.</p>
+                        </div>
+                    </div>
+                    <form class="revivir-modal-form" onsubmit="guardarCarpetaMemoriaRevivir(event)">
+                        <label>Nombre de la carpeta
+                            <input id="revivir-carpeta-nombre" type="text" required placeholder="Buenos Aires">
+                        </label>
+                        <label>URL de portada
+                            <input id="revivir-carpeta-portada" type="url" required placeholder="https://...">
+                        </label>
+                        <div class="revivir-modal-grid">
+                            <label>Ciudad
+                                <input id="revivir-carpeta-ciudad" type="text" required placeholder="Buenos Aires">
+                            </label>
+                            <label>País
+                                <input id="revivir-carpeta-pais" type="text" required placeholder="Argentina">
+                            </label>
+                        </div>
+                        <label>Fecha
+                            <input id="revivir-carpeta-fecha" type="date" required value="${new Date().toISOString().slice(0, 10)}">
+                        </label>
+                        <div class="revivir-modal-acciones">
+                            <button type="button" class="btn-nueva-aventura revivir-modal-secundario" onclick="cerrarModalRevivir()">Cancelar</button>
+                            <button type="submit" class="btn-nueva-aventura revivir-modal-primario"><i data-lucide="save"></i> Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            `);
+        };
+
+        window.guardarCarpetaMemoriaRevivir = function(event) {
+            event.preventDefault();
+            const nombre = document.getElementById('revivir-carpeta-nombre')?.value.trim();
+            const portadaUrl = document.getElementById('revivir-carpeta-portada')?.value.trim();
+            const ciudad = document.getElementById('revivir-carpeta-ciudad')?.value.trim();
+            const pais = document.getElementById('revivir-carpeta-pais')?.value.trim();
+            const fecha = normalizarFechaRevivir(document.getElementById('revivir-carpeta-fecha')?.value);
+
+            if (!nombre || !ciudad || !pais || !fecha) {
+                alert('Completá todos los campos de la carpeta.');
                 return;
             }
-            const ciudad = window.prompt('Ciudad designada para esta carpeta:');
-            if (!ciudad?.trim()) return;
-            const pais = window.prompt('País designado para esta carpeta:');
-            if (!pais?.trim()) return;
-            const fecha = window.prompt('Fecha de la carpeta (AAAA-MM-DD):', new Date().toISOString().slice(0, 10));
-            if (!normalizarFechaRevivir(fecha)) {
-                alert('Ingresá una fecha válida con formato AAAA-MM-DD.');
+            if (!/^https?:\/\//i.test(String(portadaUrl || ''))) {
+                alert('La portada debe ser una URL válida que empiece con http:// o https://.');
                 return;
             }
 
             const nuevaCarpeta = {
                 id: crearIdRevivir('carpeta'),
-                nombre: nombre.trim(),
-                portadaUrl: portadaUrl.trim(),
-                ciudad: ciudad.trim(),
-                pais: pais.trim(),
-                fecha: normalizarFechaRevivir(fecha),
+                nombre,
+                portadaUrl,
+                ciudad,
+                pais,
+                fecha,
                 archivos: []
             };
 
@@ -5210,6 +5282,7 @@ const firebaseConfig = {
             idCarpetaRevivirActiva = nuevaCarpeta.id;
             indiceMediaRevivirActual = -1;
             registrarCambioLocal(true);
+            cerrarModalRevivir();
             renderizarListaRevivir();
             renderizarArchivosRevivir();
         };
@@ -5221,31 +5294,66 @@ const firebaseConfig = {
                 return;
             }
 
-            const url = window.prompt('Pegá una URL de imagen/video o dejalo vacío para elegir un archivo local:');
-            if (url === null) return;
-            if (url && url.trim()) {
-                const urlLimpia = normalizarUrlRevivir(url);
-                if (!urlLimpia || urlLimpia.startsWith('blob:') || urlLimpia.startsWith('data:')) {
-                    alert('Usá una URL pública que empiece con http:// o https://.');
-                    return;
-                }
-                const nombre = window.prompt('Nombre del archivo:', urlLimpia.split('/').pop()?.split('?')[0] || 'Archivo') || 'Archivo';
-                carpeta.archivos.push({
-                    id: crearIdRevivir('archivo'),
-                    tipo: normalizarTipoArchivoRevivir('', urlLimpia),
-                    nombre: nombre.trim(),
-                    url: urlLimpia,
-                    size: 0,
-                    persistente: true
-                });
-                indiceMediaRevivirActual = carpeta.archivos.length - 1;
-                registrarCambioLocal(true);
-                renderizarArchivosRevivir();
-                seleccionarMediaRevivir(indiceMediaRevivirActual);
+            abrirModalRevivir(`
+                <div class="revivir-modal-contenido" role="dialog" aria-modal="true" aria-labelledby="revivir-modal-archivo-titulo">
+                    <button type="button" class="revivir-modal-cerrar" aria-label="Cerrar" onclick="cerrarModalRevivir()">×</button>
+                    <div class="revivir-modal-header">
+                        <i data-lucide="file-plus-2"></i>
+                        <div>
+                            <h3 id="revivir-modal-archivo-titulo">Agregar archivo</h3>
+                            <p>Sumá una imagen o video con URL pública, o elegí archivos desde tu dispositivo.</p>
+                        </div>
+                    </div>
+                    <div class="revivir-modal-opciones">
+                        <form class="revivir-modal-form revivir-modal-opcion" onsubmit="guardarUrlArchivoRevivir(event)">
+                            <strong><i data-lucide="link"></i> Copiar URL</strong>
+                            <label>URL de imagen o video
+                                <input id="revivir-archivo-url" type="url" required placeholder="https://...">
+                            </label>
+                            <button type="submit" class="btn-nueva-aventura revivir-modal-primario"><i data-lucide="plus"></i> Agregar URL</button>
+                        </form>
+                        <div class="revivir-modal-form revivir-modal-opcion">
+                            <strong><i data-lucide="upload-cloud"></i> Desde el dispositivo</strong>
+                            <label class="revivir-selector-archivo">
+                                <input id="revivir-modal-input-media" type="file" accept="image/*,video/*" multiple onchange="cargarMediaRevivir(event)">
+                                <span><i data-lucide="image-plus"></i> Elegir imágenes o videos</span>
+                            </label>
+                            <small>Los archivos locales se muestran en esta sesión; para conservarlos entre dispositivos usá una URL pública.</small>
+                        </div>
+                    </div>
+                </div>
+            `);
+        };
+
+        window.guardarUrlArchivoRevivir = function(event) {
+            event.preventDefault();
+            const carpeta = obtenerCarpetaRevivirActiva();
+            const url = document.getElementById('revivir-archivo-url')?.value.trim();
+            if (!carpeta) {
+                alert('Primero seleccioná o creá una carpeta.');
                 return;
             }
 
-            document.getElementById('revivir-input-media')?.click();
+            const urlLimpia = normalizarUrlRevivir(url);
+            if (!urlLimpia || urlLimpia.startsWith('blob:') || urlLimpia.startsWith('data:')) {
+                alert('Usá una URL pública que empiece con http:// o https://.');
+                return;
+            }
+
+            const tipo = normalizarTipoArchivoRevivir('', urlLimpia);
+            carpeta.archivos.push({
+                id: crearIdRevivir('archivo'),
+                tipo,
+                nombre: `${tipo === 'video' ? 'Video' : 'Imagen'} ${carpeta.archivos.length + 1}`,
+                url: urlLimpia,
+                size: 0,
+                persistente: true
+            });
+            indiceMediaRevivirActual = carpeta.archivos.length - 1;
+            registrarCambioLocal(true);
+            cerrarModalRevivir();
+            renderizarArchivosRevivir();
+            seleccionarMediaRevivir(indiceMediaRevivirActual);
         };
 
         window.cargarMediaRevivir = function(event) {
@@ -5262,7 +5370,7 @@ const firebaseConfig = {
                 .map((file) => ({
                     id: crearIdRevivir('archivo'),
                     tipo: obtenerTipoMediaRevivir(file),
-                    nombre: file.name,
+                    nombre: `${String(file.type || '').startsWith('video/') ? 'Video' : 'Imagen'} ${carpeta.archivos.length + 1}`,
                     size: file.size,
                     url: URL.createObjectURL(file),
                     persistente: false
@@ -5273,6 +5381,7 @@ const firebaseConfig = {
 
             carpeta.archivos.push(...nuevos);
             indiceMediaRevivirActual = carpeta.archivos.length - nuevos.length;
+            cerrarModalRevivir();
             renderizarArchivosRevivir();
             seleccionarMediaRevivir(indiceMediaRevivirActual);
             event.target.value = '';
@@ -5295,8 +5404,8 @@ const firebaseConfig = {
             const contenedor = document.getElementById('vista-revivir');
             if (!contenedor) return;
 
-            if (!idCarpetaRevivirActiva && carpetasRevivir.length) {
-                idCarpetaRevivirActiva = carpetasRevivir[0].id;
+            if (idCarpetaRevivirActiva && !obtenerCarpetaRevivirActiva()) {
+                idCarpetaRevivirActiva = null;
             }
             sincronizarBibliotecaDesdeCarpetaRevivir();
 
@@ -5313,7 +5422,6 @@ const firebaseConfig = {
                     </div>
                 </div>
 
-                <input id="revivir-input-media" type="file" accept="image/*,video/*" multiple onchange="cargarMediaRevivir(event)">
                 <div class="revivir-layout">
                     <aside id="revivir-lista" class="revivir-lista"></aside>
                     <section class="revivir-player">
