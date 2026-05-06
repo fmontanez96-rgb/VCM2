@@ -1655,7 +1655,7 @@
             border-radius: 12px;
             overflow: hidden;
             padding: 0;
-            cursor: default;
+            cursor: pointer;
             background: #dff1ff;
             box-shadow: 0 8px 18px rgba(6, 65, 102, 0.18);
             aspect-ratio: 4 / 3;
@@ -1666,6 +1666,10 @@
             display: block;
             object-fit: cover;
             background: #f0f9ff;
+            transition: filter 0.25s ease;
+        }
+        .tarjeta-foto-drive:hover img {
+            filter: brightness(1.12) saturate(1.08);
         }
         .tarjeta-foto-drive-video::after {
             content: 'VIDEO';
