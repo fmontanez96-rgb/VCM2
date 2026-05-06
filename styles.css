@@ -2604,7 +2604,8 @@
     pointer-events: none;
 }
 .revivir-upload-btn,
-.revivir-limpiar-btn {
+.revivir-limpiar-btn,
+.revivir-agregar-btn {
     border: none;
     cursor: pointer;
     display: inline-flex;
@@ -2612,9 +2613,15 @@
     gap: 8px;
     padding: 10px 14px;
 }
+.revivir-agregar-btn {
+    align-self: flex-start;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
 .revivir-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 300px) 1fr;
+    grid-template-columns: minmax(240px, 320px) 1fr;
     gap: 16px;
     padding: 16px;
     height: calc(100% - 96px);
@@ -2636,19 +2643,82 @@
     margin: 0;
     padding: 6px;
 }
-.revivir-item {
+.revivir-vacio-archivos {
+    color: #c6d8ec;
+    padding: 10px 2px;
+}
+.revivir-carpeta {
     width: 100%;
     border: 2px solid #adc7e7;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #f7fbff 0%, #e8f2ff 100%);
+    color: #26466f;
+    font-family: inherit;
+    text-align: left;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    cursor: pointer;
+}
+.revivir-carpeta:hover,
+.revivir-carpeta.activo {
+    border-color: #4e87c9;
+    box-shadow: 0 6px 12px rgba(34, 93, 160, 0.2);
+    transform: translateY(-1px);
+}
+.revivir-carpeta-miniatura {
+    width: 64px;
+    height: 64px;
     border-radius: 12px;
+    object-fit: cover;
+    background: #071220;
+    border: 2px solid rgba(78, 135, 201, 0.35);
+}
+.revivir-carpeta-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.revivir-carpeta-info strong,
+.revivir-carpeta-info small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.revivir-carpeta-info strong {
+    color: #1d3c66;
+    font-size: 0.98rem;
+}
+.revivir-carpeta-info small {
+    color: #5e7186;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.revivir-archivos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    max-height: 116px;
+    overflow: auto;
+    padding-right: 4px;
+}
+.revivir-item {
+    border: 2px solid rgba(173, 199, 231, 0.65);
+    border-radius: 999px;
     background: linear-gradient(180deg, #f7fbff 0%, #e8f2ff 100%);
     color: #26466f;
     font-family: inherit;
     font-weight: 700;
     text-align: left;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px;
+    max-width: 230px;
+    padding: 8px 12px;
     cursor: pointer;
 }
 .revivir-item:hover,
@@ -2669,6 +2739,12 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+}
+.revivir-player-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
 }
 .revivir-player-head h3 {
     margin: 0;
@@ -2701,9 +2777,12 @@
         height: auto;
     }
     .revivir-lista {
-        max-height: 220px;
+        max-height: 260px;
     }
     .revivir-player {
-        min-height: 320px;
+        min-height: 420px;
+    }
+    .revivir-player-head {
+        flex-direction: column;
     }
 }
