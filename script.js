@@ -1,13 +1,3 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyB3KdarawI0Ch0HYOQo6LXkDP5Zclui0yI",
-  authDomain: "carolandia-199a5.firebaseapp.com",
-  databaseURL: "https://carolandia-199a5-default-rtdb.firebaseio.com",
-  projectId: "carolandia-199a5",
-  storageBucket: "carolandia-199a5.firebasestorage.app",
-  messagingSenderId: "940168409879",
-  appId: "1:940168409879:web:cde4e3bd76a934f4e47d52",
-  measurementId: "G-HEDFE5BZ7X"
-};
         lucide.createIcons();
 
         // BASES DE DATOS EN MEMORIA
@@ -17,13 +7,8 @@ const firebaseConfig = {
         let estadoVistaRecuerdos = { modo: 'lista', idPais: null, idProvincia: null, submodo: 'ver', seccionNuevo: 'drive' };
         let estadoVistaSonados = { modo: 'lista', idPais: null };
         let estadoVistaItinerario = { modo: 'lista', idPais: null };
-        let firebaseDb = null;
-        let estadoInicialSincronizado = false;
-        let ultimaHuellaSincronizada = "";
-        let sincronizacionLocalEnCurso = false;
-        let hayCambiosPendientesDeSincronizar = false;
+        let ultimaHuellaGuardada = "";
         let intervaloAutosave = null;
-        let rutaEstadoFirebase = null;
         let estadoEdicionPortadaItinerario = {};
         let carpetasRevivir = [];
         let idCarpetaRevivirActiva = null;
@@ -36,8 +21,9 @@ const firebaseConfig = {
         let youtubeApiPromise = null;
         let youtubeApiReadyResolver = null;
         let controladorCargaVistaDrive = null;
-        const LIMITE_ESTADO_FIREBASE_BYTES = 8 * 1024 * 1024;
-        const LIMITE_IMAGEN_FIREBASE_BYTES = 350 * 1024;
+        const CLAVE_ESTADO_LOCAL = "nuestraHistoria.estadoLocal";
+        const LIMITE_ESTADO_LOCAL_BYTES = 8 * 1024 * 1024;
+        const LIMITE_IMAGEN_LOCAL_BYTES = 350 * 1024;
         const CONFIG_VISTA_DRIVE = Object.freeze({
             permitirAbrirEnPestana: true,
             apiFolderImagesEndpoint: typeof window !== 'undefined' && window.__DRIVE_FOLDER_IMAGES_API__
@@ -45,7 +31,6 @@ const firebaseConfig = {
                 : '/api/drive-folder-images'
         });
 
-        const RUTA_ESTADO_COMPARTIDO = "nuestraHistoria/estadoCompartido";
 
         function cargarYoutubeIframeApiUnaVez() {
             if (window.YT && typeof window.YT.Player === 'function') {
@@ -143,9 +128,6 @@ const firebaseConfig = {
             if (typeof player.playVideo === 'function') player.playVideo();
         };
 
-        function obtenerRutaEstadoFirebase(uid = "") {
-            return RUTA_ESTADO_COMPARTIDO;
-        }
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
         function obtenerEstadoActual() {
             normalizarColeccionMemorias();
@@ -792,167 +774,59 @@ const firebaseConfig = {
                 `Precio por persona: ${formatearMonedaItinerario(item.costo ?? item.precio ?? 0)}`
             ];
         }
-        function guardarEstadoEnFirebase(forzar = false) {
-            if (!firebaseDb || !rutaEstadoFirebase) return Promise.resolve(false);
-            if (!estadoInicialSincronizado) {
-                hayCambiosPendientesDeSincronizar = true;
-                return Promise.resolve(false);
-            }
-
+        function guardarEstadoLocal(forzar = false) {
             normalizarColeccionMemorias();
             const estado = obtenerEstadoActual();
             const bytesEstado = estimarBytesEstado(estado);
-            if (bytesEstado > LIMITE_ESTADO_FIREBASE_BYTES) {
-                console.error(`Estado demasiado grande para Firebase (${bytesEstado} bytes). Reduce imágenes o historias.`);
-                return Promise.resolve(false);
+            if (bytesEstado > LIMITE_ESTADO_LOCAL_BYTES) {
+                console.error(`Estado local demasiado grande (${bytesEstado} bytes). Reduce imágenes o historias.`);
+                return false;
             }
-            const huellaActual = calcularHuellaEstado(estado);
-            if (!forzar && huellaActual === ultimaHuellaSincronizada) return Promise.resolve(true);
-            sincronizacionLocalEnCurso = true;
-            hayCambiosPendientesDeSincronizar = false;
 
-            return firebaseDb.ref(rutaEstadoFirebase).set(estado)
-                .then(() => {
-                    ultimaHuellaSincronizada = huellaActual;
-                    return true;
-                })
-                .catch((error) => {
-                    console.error("No se pudo guardar en Firebase:", error);
-                    hayCambiosPendientesDeSincronizar = true;
-                    return false;
-                });
+            const huellaActual = calcularHuellaEstado(estado);
+            if (!forzar && huellaActual === ultimaHuellaGuardada) return true;
+
+            try {
+                localStorage.setItem(CLAVE_ESTADO_LOCAL, JSON.stringify(estado));
+                ultimaHuellaGuardada = huellaActual;
+                return true;
+            } catch (error) {
+                console.error("No se pudo guardar el estado local:", error);
+                return false;
+            }
         }
 
         function registrarCambioLocal(forzarGuardado = false) {
-            sincronizacionLocalEnCurso = true;
-            hayCambiosPendientesDeSincronizar = true;
             if (forzarGuardado) {
-                guardarEstadoEnFirebase(true);
+                guardarEstadoLocal(true);
             }
         }
 
-        function marcarEstadoInicialSincronizado() {
-            estadoInicialSincronizado = true;
-            if (hayCambiosPendientesDeSincronizar) {
-                guardarEstadoEnFirebase(true);
-            }
-        }
-
-        function iniciarSincronizacionFirebase() {
+        function cargarEstadoLocal() {
             try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
+                const estadoGuardado = localStorage.getItem(CLAVE_ESTADO_LOCAL);
+                if (estadoGuardado) {
+                    const estado = JSON.parse(estadoGuardado);
+                    ultimaHuellaGuardada = calcularHuellaEstado(estado);
+                    aplicarEstadoRemoto(estado);
+                    return;
                 }
-
-                const auth = firebase.auth();
-                firebaseDb = firebase.database();
-
-                auth.onAuthStateChanged((usuario) => {
-                    if (!usuario) {
-                        auth.signInAnonymously().catch((error) => {
-                            console.error("No se pudo iniciar sesión anónima en Firebase:", error);
-                            sincronizarEstadoConRutaPublica();
-                        });
-                        return;
-                    }
-
-                    const nuevaRutaEstado = obtenerRutaEstadoFirebase(usuario.uid);
-                    if (rutaEstadoFirebase) {
-                        firebaseDb.ref(rutaEstadoFirebase).off("value");
-                    }
-                    rutaEstadoFirebase = nuevaRutaEstado;
-
-                    firebaseDb.ref(rutaEstadoFirebase).on("value", (snapshot) => {
-                        const estadoRemoto = snapshot.val();
-                        if (estadoRemoto) {
-                            const huellaRemota = calcularHuellaEstado(estadoRemoto);
-                            const huellaLocal = calcularHuellaEstado();
-                            if (sincronizacionLocalEnCurso && huellaRemota === huellaLocal) {
-                                sincronizacionLocalEnCurso = false;
-                                ultimaHuellaSincronizada = huellaRemota;
-                                return;
-                            }
-                            if (sincronizacionLocalEnCurso) {
-                                return;
-                            }
-                            if (huellaRemota !== ultimaHuellaSincronizada) {
-                                ultimaHuellaSincronizada = huellaRemota;
-                                aplicarEstadoRemoto(estadoRemoto);
-                            }
-                        } else {
-                            cargarMapa();
-                            renderizarPantallaRecuerdos();
-                            renderizarPantallaSonados();
-                            marcarEstadoInicialSincronizado();
-                            guardarEstadoEnFirebase(true);
-                        }
-
-                        marcarEstadoInicialSincronizado();
-                    }, (error) => {
-                        console.error("Error al leer estado desde Firebase:", error);
-                        marcarEstadoInicialSincronizado();
-                        cargarMapa();
-                    });
-
-                    if (!intervaloAutosave) {
-                        intervaloAutosave = setInterval(() => guardarEstadoEnFirebase(), 1200);
-                        window.addEventListener("beforeunload", () => guardarEstadoEnFirebase(true));
-                    }
-                });
             } catch (error) {
-                console.error("No se pudo inicializar Firebase:", error);
-                marcarEstadoInicialSincronizado();
-                cargarMapa();
+                console.error("No se pudo cargar el estado local:", error);
             }
+
+            cargarMapa();
+            renderizarPantallaRecuerdos();
+            renderizarPantallaSonados();
+            guardarEstadoLocal(true);
         }
 
-        function sincronizarEstadoConRutaPublica() {
-            if (!firebaseDb) {
-                marcarEstadoInicialSincronizado();
-                cargarMapa();
-                renderizarPantallaRecuerdos();
-                renderizarPantallaSonados();
-                return;
-            }
-
-            const rutaPublica = obtenerRutaEstadoFirebase();
-            if (rutaEstadoFirebase && rutaEstadoFirebase !== rutaPublica) {
-                firebaseDb.ref(rutaEstadoFirebase).off("value");
-            }
-            rutaEstadoFirebase = rutaPublica;
-
-            firebaseDb.ref(rutaEstadoFirebase).on("value", (snapshot) => {
-                const estadoRemoto = snapshot.val();
-                if (estadoRemoto) {
-                    const huellaRemota = calcularHuellaEstado(estadoRemoto);
-                    const huellaLocal = calcularHuellaEstado();
-                    if (sincronizacionLocalEnCurso && huellaRemota === huellaLocal) {
-                        sincronizacionLocalEnCurso = false;
-                        ultimaHuellaSincronizada = huellaRemota;
-                        return;
-                    }
-                    if (sincronizacionLocalEnCurso) {
-                        return;
-                    }
-                    if (huellaRemota !== ultimaHuellaSincronizada) {
-                        ultimaHuellaSincronizada = huellaRemota;
-                        aplicarEstadoRemoto(estadoRemoto);
-                    }
-                } else {
-                    cargarMapa();
-                    renderizarPantallaRecuerdos();
-                    renderizarPantallaSonados();
-                }
-                marcarEstadoInicialSincronizado();
-            }, (error) => {
-                console.error("Error al leer estado público desde Firebase:", error);
-                marcarEstadoInicialSincronizado();
-                cargarMapa();
-            });
+        function iniciarPersistenciaLocal() {
+            cargarEstadoLocal();
 
             if (!intervaloAutosave) {
-                intervaloAutosave = setInterval(() => guardarEstadoEnFirebase(), 1200);
-                window.addEventListener("beforeunload", () => guardarEstadoEnFirebase(true));
+                intervaloAutosave = setInterval(() => guardarEstadoLocal(), 1200);
+                window.addEventListener("beforeunload", () => guardarEstadoLocal(true));
             }
         }
 
@@ -2566,7 +2440,7 @@ const firebaseConfig = {
                     return;
                 }
 
-                if (archivo.size <= LIMITE_IMAGEN_FIREBASE_BYTES) {
+                if (archivo.size <= LIMITE_IMAGEN_LOCAL_BYTES) {
                     const reader = new FileReader();
                     reader.onload = (e) => resolve(e.target.result);
                     reader.onerror = () => reject(new Error("No se pudo leer el archivo de portada."));
@@ -2575,13 +2449,13 @@ const firebaseConfig = {
                     return;
                 }
 
-                comprimirImagenParaFirebase(archivo, LIMITE_IMAGEN_FIREBASE_BYTES)
+                comprimirImagenLocal(archivo, LIMITE_IMAGEN_LOCAL_BYTES)
                     .then(resolve)
                     .catch(() => reject(new Error("La imagen es demasiado grande. Usa una imagen más liviana.")));
             });
         }
 
-        function comprimirImagenParaFirebase(archivo, maxBytes = LIMITE_IMAGEN_FIREBASE_BYTES) {
+        function comprimirImagenLocal(archivo, maxBytes = LIMITE_IMAGEN_LOCAL_BYTES) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (evento) => {
@@ -4477,7 +4351,7 @@ const firebaseConfig = {
 
             const nombreLimpio = nuevoNombre.trim();
             dia.nombre = nombreLimpio || `Día ${dia.numero || 1}`;
-            sincronizacionLocalEnCurso = true;
+            registrarCambioLocal(true);
             dibujarItinerario(idPais);
         };
 
@@ -4875,7 +4749,7 @@ const firebaseConfig = {
             document.getElementById('contenedor-formularios').innerHTML = '';
             document.querySelectorAll('.btn-tipo-item').forEach(b => b.classList.remove('seleccionado'));
             estadoVistaSonados = { modo: 'detalle', idPais };
-            sincronizacionLocalEnCurso = true;
+            registrarCambioLocal(true);
             dibujarItinerario(idPais);
         };
 
@@ -4969,7 +4843,7 @@ const firebaseConfig = {
 
             [destino.itinerario[indiceActual], destino.itinerario[nuevoIndice]] = [destino.itinerario[nuevoIndice], destino.itinerario[indiceActual]];
 
-            sincronizacionLocalEnCurso = true;
+            registrarCambioLocal(true);
 
             const modoActivo = estadoVistaItinerario?.modo === 'calendario' ? 'calendario' : 'lista';
             dibujarItinerario(idPais);
@@ -5753,6 +5627,6 @@ const firebaseConfig = {
         });
 
         document.addEventListener("DOMContentLoaded", async () => {
-            iniciarSincronizacionFirebase();
+            iniciarPersistenciaLocal();
         });
     
