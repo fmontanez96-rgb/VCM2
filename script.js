@@ -35,6 +35,7 @@ const firebaseConfig = {
         const LIMITE_ESTADO_FIREBASE_BYTES = 8 * 1024 * 1024;
         const LIMITE_IMAGEN_FIREBASE_BYTES = 350 * 1024;
         const CONFIG_VISTA_DRIVE = Object.freeze({
+            permitirAbrirEnPestana: true,
             apiFolderImagesEndpoint: typeof window !== 'undefined' && window.__DRIVE_FOLDER_IMAGES_API__
                 ? String(window.__DRIVE_FOLDER_IMAGES_API__).trim()
                 : '/api/drive-folder-images'
@@ -2879,10 +2880,12 @@ const firebaseConfig = {
         async function mostrarModalVistaDrive(urlDrive, titulo = "Carpeta compartida") {
             cerrarModalVistaDrive();
 
+            const urlEmbebida = construirUrlDriveEmbebida(urlDrive);
             const resultadoImagenes = await obtenerArchivosPublicosDeCarpetaDrive(urlDrive);
             const archivos = resultadoImagenes?.archivos || [];
             const errorConsultaImagenes = Boolean(resultadoImagenes?.error);
             const galeriaFotos = construirGaleriaDriveHtml(archivos);
+            const permitirAbrirEnPestana = Boolean(CONFIG_VISTA_DRIVE?.permitirAbrirEnPestana);
             const modal = document.createElement('div');
             modal.id = 'modal-vista-drive';
             modal.className = 'modal-vista-drive-fondo';
@@ -2899,16 +2902,29 @@ const firebaseConfig = {
                         ` : errorConsultaImagenes ? `
                             <div class="mensaje-vista-drive">
                                 <i data-lucide="alert-circle"></i>
-                                <p>No pudimos cargar la vista previa en este momento.</p>
+                                <p>No pudimos cargar la vista previa en este momento. Puedes abrir la carpeta en una pestaña nueva.</p>
+                            </div>
+                        ` : urlEmbebida ? `
+                            <div class="contenedor-embed-drive">
+                                <iframe
+                                    class="iframe-vista-drive"
+                                    src="${urlEmbebida}"
+                                    title="Contenido compartido de Google Drive"
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer-when-downgrade"
+                                    allow="clipboard-write">
+                                </iframe>
+                                <p class="mensaje-permisos-drive">No se puede previsualizar aquí por permisos del proveedor.</p>
                             </div>
                         ` : `
                             <div class="mensaje-vista-drive">
                                 <i data-lucide="alert-circle"></i>
-                                <p>No se puede previsualizar esta carpeta dentro de la app.</p>
+                                <p>No se puede previsualizar aquí por permisos del proveedor.</p>
                             </div>
                         `}
                     </div>
                     <div class="modal-vista-drive-acciones">
+                        ${permitirAbrirEnPestana ? `<button type="button" class="btn-modal-memoria link" id="btn-drive-externo">Abrir en pestaña</button>` : ``}
                         <button type="button" class="btn-modal-memoria primario" id="btn-drive-cerrar">Cerrar</button>
                     </div>
                 </div>
@@ -2921,10 +2937,12 @@ const firebaseConfig = {
 
             const btnCerrarSuperior = modal.querySelector('.btn-cerrar-modal-memoria');
             const btnCerrar = modal.querySelector('#btn-drive-cerrar');
+            const btnExterno = modal.querySelector('#btn-drive-externo');
             const contenedorCuerpo = modal.querySelector('.modal-vista-drive-cuerpo');
 
             btnCerrarSuperior?.addEventListener('click', cerrarModalVistaDrive);
             btnCerrar?.addEventListener('click', cerrarModalVistaDrive);
+            btnExterno?.addEventListener('click', () => window.open(urlDrive, '_blank', 'noopener,noreferrer'));
             modal.addEventListener('click', (event) => {
                 if (event.target === modal) cerrarModalVistaDrive();
             });
@@ -2951,6 +2969,20 @@ const firebaseConfig = {
                         return;
                     }
 
+                    if (urlEmbebida) {
+                        renderizarContenidoModal(`
+                            <iframe
+                                class="iframe-vista-drive"
+                                src="${urlEmbebida}"
+                                title="Contenido compartido de Google Drive"
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                allow="clipboard-write">
+                            </iframe>
+                        `);
+                        return;
+                    }
+
                     renderizarContenidoModal(`
                         <div class="mensaje-vista-drive">
                             <i data-lucide="alert-circle"></i>
@@ -2962,7 +2994,7 @@ const firebaseConfig = {
                     renderizarContenidoModal(`
                         <div class="mensaje-vista-drive">
                             <i data-lucide="info"></i>
-                            <p>No logramos cargar el contenido ahora. Puedes intentar de nuevo más tarde.</p>
+                            <p>No logramos cargar el contenido ahora. Puedes intentar de nuevo o abrirlo en una pestaña.</p>
                         </div>
                     `);
                 } finally {
