@@ -2938,8 +2938,8 @@ const firebaseConfig = {
                         `}
                     </div>
                     <div class="modal-vista-drive-acciones">
-                        ${permitirAbrirEnPestana ? `<button type="button" class="btn-modal-memoria link" id="btn-drive-externo">Abrir en pestaña</button>` : ``}
-                        <button type="button" class="btn-modal-memoria primario" id="btn-drive-cerrar">Cerrar</button>
+                        ${permitirAbrirEnPestana ? `<button type="button" class="btn-modal-memoria btn-drive-metal" id="btn-drive-externo">Ver en DRIVE</button>` : ``}
+                        <button type="button" class="btn-modal-memoria btn-drive-cerrar" id="btn-drive-cerrar">Cerrar</button>
                     </div>
                 </div>
             `;
