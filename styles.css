@@ -1622,10 +1622,15 @@
             border-radius: 12px;
             overflow: hidden;
             padding: 0;
-            cursor: default;
+            cursor: pointer;
             background: #dff1ff;
             box-shadow: 0 8px 18px rgba(6, 65, 102, 0.18);
             min-height: 160px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+        }
+        .tarjeta-foto-drive:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 28px rgba(0, 188, 212, 0.38), 0 0 18px rgba(255, 255, 255, 0.85);
         }
         .tarjeta-foto-drive img {
             width: 100%;
@@ -1633,6 +1638,10 @@
             display: block;
             object-fit: cover;
             background: #f0f9ff;
+            transition: filter 0.25s ease;
+        }
+        .tarjeta-foto-drive:hover img {
+            filter: brightness(1.12) saturate(1.08);
         }
         .tarjeta-foto-drive-video::after {
             content: 'VIDEO';
