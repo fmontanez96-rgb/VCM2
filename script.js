@@ -5440,8 +5440,8 @@ const firebaseConfig = {
                     <div class="revivir-modal-header">
                         <i data-lucide="file-plus-2"></i>
                         <div>
-                            <h3 id="revivir-modal-archivo-titulo">Agregar archivo</h3>
-                            <p>Sumá una imagen o video con URL pública, o elegí archivos desde tu dispositivo.</p>
+                            <h3 id="revivir-modal-archivo-titulo">Agregar archivos</h3>
+                            <p>Sumá una imagen o video con URL pública, o elegí varios archivos desde tu dispositivo para agregarlos todos de una vez.</p>
                         </div>
                     </div>
                     <div class="revivir-modal-opciones">
@@ -5456,9 +5456,10 @@ const firebaseConfig = {
                             <strong><i data-lucide="upload-cloud"></i> Desde el dispositivo</strong>
                             <label class="revivir-selector-archivo">
                                 <input id="revivir-modal-input-media" type="file" accept="image/*,video/*" multiple onchange="cargarMediaRevivir(event)">
-                                <span><i data-lucide="image-plus"></i> Elegir imágenes o videos</span>
+                                <span><i data-lucide="image-plus"></i> Elegir una o varias imágenes o videos</span>
                             </label>
-                            <small>Los archivos locales se muestran en esta sesión; para conservarlos entre dispositivos usá una URL pública.</small>
+                            <small>Podés seleccionar varios archivos a la vez; se agregarán uno por uno en la carpeta. Los archivos locales se muestran en esta sesión; para conservarlos entre dispositivos usá una URL pública.</small>
+                            <small id="revivir-modal-estado-carga" class="revivir-modal-estado-carga" hidden></small>
                         </div>
                     </div>
                 </div>
@@ -5496,35 +5497,73 @@ const firebaseConfig = {
             seleccionarMediaRevivir(indiceMediaRevivirActual);
         };
 
-        window.cargarMediaRevivir = function(event) {
+        function obtenerNombreArchivoLocalRevivir(file, tipo, numero) {
+            const nombreOriginal = String(file?.name || '').trim();
+            if (nombreOriginal) return nombreOriginal;
+            return `${tipo === 'video' ? 'Video' : 'Imagen'} ${numero}`;
+        }
+
+        function actualizarEstadoCargaRevivir(mensaje = '') {
+            const estado = document.getElementById('revivir-modal-estado-carga');
+            if (!estado) return;
+            estado.textContent = mensaje;
+            estado.hidden = !mensaje;
+        }
+
+        function esperarTurnoCargaRevivir() {
+            return new Promise((resolve) => setTimeout(resolve, 0));
+        }
+
+        window.cargarMediaRevivir = async function(event) {
+            const input = event?.target;
             const carpeta = obtenerCarpetaRevivirActiva();
             if (!carpeta) {
                 alert('Primero seleccioná o creá una carpeta.');
-                event.target.value = '';
+                if (input) input.value = '';
                 return;
             }
-            const archivos = Array.from(event?.target?.files || []);
+            const archivos = Array.from(input?.files || []);
             if (!archivos.length) return;
 
-            const nuevos = archivos
-                .map((file) => ({
+            const nuevos = [];
+            const rechazados = [];
+            for (const file of archivos) {
+                const tipo = obtenerTipoMediaRevivir(file);
+                if (!tipo) {
+                    rechazados.push(file?.name || 'Archivo sin nombre');
+                    continue;
+                }
+
+                const numero = carpeta.archivos.length + nuevos.length + 1;
+                actualizarEstadoCargaRevivir(`Agregando ${nuevos.length + 1} de ${archivos.length}: ${file.name || (tipo === 'video' ? 'video' : 'imagen')}`);
+                nuevos.push({
                     id: crearIdRevivir('archivo'),
-                    tipo: obtenerTipoMediaRevivir(file),
-                    nombre: `${String(file.type || '').startsWith('video/') ? 'Video' : 'Imagen'} ${carpeta.archivos.length + 1}`,
+                    tipo,
+                    nombre: obtenerNombreArchivoLocalRevivir(file, tipo, numero),
                     size: file.size,
                     url: URL.createObjectURL(file),
                     persistente: false
-                }))
-                .filter((item) => item.tipo);
+                });
+                await esperarTurnoCargaRevivir();
+            }
 
-            if (!nuevos.length) return;
+            if (input) input.value = '';
+            if (!nuevos.length) {
+                actualizarEstadoCargaRevivir('');
+                alert('Elegí imágenes o videos válidos para agregar a la carpeta.');
+                return;
+            }
 
             carpeta.archivos.push(...nuevos);
             indiceMediaRevivirActual = carpeta.archivos.length - nuevos.length;
             cerrarModalRevivir();
+            renderizarListaRevivir();
             renderizarArchivosRevivir();
             seleccionarMediaRevivir(indiceMediaRevivirActual);
-            event.target.value = '';
+
+            if (rechazados.length) {
+                alert(`Se agregaron ${nuevos.length} archivo${nuevos.length === 1 ? '' : 's'}. No se pudieron agregar ${rechazados.length} porque no eran imágenes o videos.`);
+            }
         };
 
         window.limpiarMediaRevivir = function() {
