@@ -55,7 +55,11 @@
 
     <div id="media-lightbox" class="media-lightbox" aria-hidden="true">
         <div class="media-lightbox__dialog" role="dialog" aria-modal="true" aria-label="Visor multimedia">
-            <button type="button" id="media-lightbox-close" class="media-lightbox__close" aria-label="Cerrar visor">×</button>
+            <div class="media-lightbox__toolbar">
+                <span id="media-lightbox-status" class="media-lightbox__status"></span>
+                <button type="button" id="media-lightbox-fullscreen" class="media-lightbox__fullscreen" aria-label="Ver en pantalla completa">⛶</button>
+                <button type="button" id="media-lightbox-close" class="media-lightbox__close" aria-label="Cerrar visor">×</button>
+            </div>
             <img id="media-lightbox-image" class="media-lightbox__image" alt="" hidden>
             <video id="media-lightbox-video" class="media-lightbox__video" controls autoplay playsinline hidden>
                 Tu navegador no puede reproducir este video.

@@ -29,6 +29,8 @@ const firebaseConfig = {
         let idCarpetaRevivirActiva = null;
         let bibliotecaRevivir = [];
         let indiceMediaRevivirActual = -1;
+        let temporizadorPresentacionRevivir = null;
+        let presentacionActivaRevivir = false;
         let playersMusica = {};
         window.playersMusica = playersMusica;
         let youtubeApiPromise = null;
@@ -3064,15 +3066,18 @@ const firebaseConfig = {
                 btnCerrar: document.getElementById('media-lightbox-close'),
                 imagen: document.getElementById('media-lightbox-image'),
                 video: document.getElementById('media-lightbox-video'),
-                frameVideo: document.getElementById('media-lightbox-video-frame')
+                frameVideo: document.getElementById('media-lightbox-video-frame'),
+                btnPantallaCompleta: document.getElementById('media-lightbox-fullscreen'),
+                estado: document.getElementById('media-lightbox-status')
             };
         }
 
         function cerrarModalVistaImagen() {
-            const { contenedor, imagen, video, frameVideo } = obtenerElementosLightbox();
+            detenerPresentacionRevivir();
+            const { contenedor, imagen, video, frameVideo, estado } = obtenerElementosLightbox();
             if (!contenedor) return;
 
-            contenedor.classList.remove('activo');
+            contenedor.classList.remove('activo', 'media-lightbox--presentacion');
             contenedor.setAttribute('aria-hidden', 'true');
 
             if (imagen) {
@@ -3092,6 +3097,7 @@ const firebaseConfig = {
                 frameVideo.removeAttribute('src');
                 frameVideo.hidden = true;
             }
+            if (estado) estado.textContent = '';
 
             if (!document.getElementById('modal-vista-drive')) {
                 document.body.classList.remove('sin-scroll');
@@ -3103,14 +3109,27 @@ const firebaseConfig = {
             if (event.key === 'Escape') cerrarModalVistaImagen();
         }
 
+        function alternarPantallaCompletaLightbox() {
+            const { contenedor, dialogo } = obtenerElementosLightbox();
+            const objetivo = dialogo || contenedor;
+            if (!objetivo) return;
+            if (document.fullscreenElement) {
+                document.exitFullscreen?.();
+                return;
+            }
+            objetivo.requestFullscreen?.();
+        }
+
         function inicializarEventosLightbox() {
-            const { contenedor, btnCerrar } = obtenerElementosLightbox();
+            const { contenedor, btnCerrar, btnPantallaCompleta, video } = obtenerElementosLightbox();
             if (!contenedor || contenedor.dataset.eventsReady === 'true') return;
 
             contenedor.addEventListener('click', (event) => {
                 if (event.target === contenedor) cerrarModalVistaImagen();
             });
             btnCerrar?.addEventListener('click', cerrarModalVistaImagen);
+            btnPantallaCompleta?.addEventListener('click', alternarPantallaCompletaLightbox);
+            video?.addEventListener('ended', avanzarPresentacionRevivir);
             contenedor.dataset.eventsReady = 'true';
         }
 
@@ -3188,6 +3207,92 @@ const firebaseConfig = {
             document.body.classList.add('sin-scroll');
             document.addEventListener('keydown', manejarEscapeModalImagen);
         }
+
+        function detenerPresentacionRevivir() {
+            presentacionActivaRevivir = false;
+            if (temporizadorPresentacionRevivir) {
+                clearTimeout(temporizadorPresentacionRevivir);
+                temporizadorPresentacionRevivir = null;
+            }
+        }
+
+        function avanzarPresentacionRevivir() {
+            if (!presentacionActivaRevivir) return;
+            sincronizarBibliotecaDesdeCarpetaRevivir();
+            if (!bibliotecaRevivir.length) {
+                cerrarModalVistaImagen();
+                return;
+            }
+            mostrarMediaPresentacionRevivir((indiceMediaRevivirActual + 1) % bibliotecaRevivir.length);
+        }
+
+        function mostrarMediaPresentacionRevivir(index = 0) {
+            if (!presentacionActivaRevivir) return;
+            sincronizarBibliotecaDesdeCarpetaRevivir();
+            if (!bibliotecaRevivir.length) {
+                cerrarModalVistaImagen();
+                return;
+            }
+
+            const indiceSeguro = ((Number(index) || 0) % bibliotecaRevivir.length + bibliotecaRevivir.length) % bibliotecaRevivir.length;
+            const media = bibliotecaRevivir[indiceSeguro];
+            indiceMediaRevivirActual = indiceSeguro;
+
+            inicializarEventosLightbox();
+            const { contenedor, imagen, video, frameVideo, estado } = obtenerElementosLightbox();
+            if (!contenedor || !imagen || !video || !media) return;
+
+            if (temporizadorPresentacionRevivir) {
+                clearTimeout(temporizadorPresentacionRevivir);
+                temporizadorPresentacionRevivir = null;
+            }
+            if (frameVideo) {
+                frameVideo.hidden = true;
+                frameVideo.removeAttribute('src');
+            }
+
+            const carpeta = obtenerCarpetaRevivirActiva();
+            if (estado) {
+                const nombre = media.nombre || (media.tipo === 'video' ? 'Video' : 'Imagen');
+                estado.textContent = `${indiceSeguro + 1}/${bibliotecaRevivir.length} · ${nombre}${carpeta ? ` · ${carpeta.nombre}` : ''}`;
+            }
+
+            if (media.tipo === 'video') {
+                imagen.hidden = true;
+                imagen.removeAttribute('src');
+                video.hidden = false;
+                video.controls = true;
+                video.src = media.url;
+                video.load();
+                video.play?.().catch(() => {});
+            } else {
+                video.pause();
+                video.hidden = true;
+                video.removeAttribute('src');
+                video.load();
+                imagen.hidden = false;
+                imagen.src = media.url;
+                imagen.alt = media.nombre || 'Foto de Revivir';
+                temporizadorPresentacionRevivir = setTimeout(avanzarPresentacionRevivir, 5000);
+            }
+
+            contenedor.classList.add('activo', 'media-lightbox--presentacion');
+            contenedor.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('sin-scroll');
+            document.addEventListener('keydown', manejarEscapeModalImagen);
+            seleccionarMediaRevivir(indiceSeguro);
+        }
+
+        window.iniciarPresentacionRevivir = function() {
+            sincronizarBibliotecaDesdeCarpetaRevivir();
+            if (!bibliotecaRevivir.length) {
+                alert('Agregá fotos o videos a la carpeta antes de reproducir.');
+                return;
+            }
+            presentacionActivaRevivir = true;
+            const indiceInicial = indiceMediaRevivirActual >= 0 ? indiceMediaRevivirActual : 0;
+            mostrarMediaPresentacionRevivir(indiceInicial);
+        };
 
         function cerrarMenuMemoria() {
             document.getElementById('menu-contextual-memoria')?.remove();
@@ -5075,6 +5180,31 @@ const firebaseConfig = {
             }));
         }
 
+        function calcularTamanoCarpetaRevivir(carpeta = null) {
+            return (Array.isArray(carpeta?.archivos) ? carpeta.archivos : [])
+                .reduce((total, archivo) => total + Math.max(0, Number(archivo?.size || 0)), 0);
+        }
+
+        function formatearTamanoBytesRevivir(bytes = 0) {
+            const valor = Math.max(0, Number(bytes || 0));
+            if (!valor) return '0 MB';
+            const unidades = ['bytes', 'KB', 'MB', 'GB'];
+            let cantidad = valor;
+            let unidad = 0;
+            while (cantidad >= 1024 && unidad < unidades.length - 1) {
+                cantidad /= 1024;
+                unidad += 1;
+            }
+            const decimales = unidad === 0 ? 0 : (cantidad >= 10 ? 1 : 2);
+            return `${cantidad.toFixed(decimales)} ${unidades[unidad]}`;
+        }
+
+        function obtenerResumenCarpetaRevivir(carpeta = null) {
+            const totalArchivos = Array.isArray(carpeta?.archivos) ? carpeta.archivos.length : 0;
+            const totalBytes = calcularTamanoCarpetaRevivir(carpeta);
+            return `${totalArchivos} archivo${totalArchivos === 1 ? '' : 's'} · ${formatearTamanoBytesRevivir(totalBytes)}`;
+        }
+
         function sincronizarBibliotecaDesdeCarpetaRevivir() {
             const carpeta = obtenerCarpetaRevivirActiva();
             bibliotecaRevivir = carpeta?.archivos || [];
@@ -5088,6 +5218,7 @@ const firebaseConfig = {
         }
 
         function detenerReproductorRevivir() {
+            if (presentacionActivaRevivir) cerrarModalVistaImagen();
             const video = document.getElementById('revivir-player-video');
             if (video) {
                 video.pause();
@@ -5153,46 +5284,23 @@ const firebaseConfig = {
             if (!media) return;
 
             indiceMediaRevivirActual = index;
-            const img = document.getElementById('revivir-player-image');
-            const video = document.getElementById('revivir-player-video');
             const titulo = document.getElementById('revivir-player-titulo');
             const meta = document.getElementById('revivir-player-meta');
-
-            if (!img || !video || !titulo || !meta) return;
-
             const carpeta = obtenerCarpetaRevivirActiva();
-            titulo.textContent = carpeta ? carpeta.nombre : 'Vista previa';
-            const textoTamano = media.size ? ` · ${(media.size / 1024 / 1024).toFixed(2)} MB` : '';
-            meta.textContent = `${media.tipo === 'video' ? 'Video' : 'Imagen'} ${index + 1}${textoTamano}${carpeta ? ` · ${carpeta.ciudad}, ${carpeta.pais}` : ''}`;
 
-            if (media.tipo === 'video') {
-                img.hidden = true;
-                img.removeAttribute('src');
-                video.hidden = false;
-                video.src = media.url;
-                video.load();
-            } else {
-                detenerReproductorRevivir();
-                video.hidden = true;
-                img.hidden = false;
-                img.src = media.url;
-                img.alt = 'Vista previa de Revivir';
+            if (titulo) titulo.textContent = carpeta ? carpeta.nombre : 'Reproducción de recuerdos';
+            if (meta) {
+                const textoTamano = media.size ? ` · ${formatearTamanoBytesRevivir(media.size)}` : '';
+                const resumenCarpeta = carpeta ? ` · Total carpeta: ${formatearTamanoBytesRevivir(calcularTamanoCarpetaRevivir(carpeta))}` : '';
+                meta.textContent = `${media.tipo === 'video' ? 'Video' : 'Imagen'} ${index + 1}${textoTamano}${resumenCarpeta}${carpeta ? ` · ${carpeta.ciudad}, ${carpeta.pais}` : ''}`;
             }
 
             renderizarArchivosRevivir();
         }
 
         function limpiarVisorRevivir(mensaje = 'Seleccioná una carpeta para ver sus fotos y videos acá.') {
-            detenerReproductorRevivir();
-            const img = document.getElementById('revivir-player-image');
-            const video = document.getElementById('revivir-player-video');
             const titulo = document.getElementById('revivir-player-titulo');
             const meta = document.getElementById('revivir-player-meta');
-            if (img) {
-                img.hidden = true;
-                img.removeAttribute('src');
-            }
-            if (video) video.hidden = true;
             if (titulo) titulo.textContent = 'Tu momento especial';
             if (meta) meta.textContent = mensaje;
         }
@@ -5213,7 +5321,7 @@ const firebaseConfig = {
                     <span class="revivir-carpeta-info">
                         <strong>${escaparHtml(carpeta.nombre)}</strong>
                         <small>${escaparHtml(carpeta.ciudad)}, ${escaparHtml(carpeta.pais)} · ${escaparHtml(carpeta.fecha)}</small>
-                        <small>${carpeta.archivos.length} archivo${carpeta.archivos.length === 1 ? '' : 's'}</small>
+                        <small><i data-lucide="hard-drive"></i> ${escaparHtml(obtenerResumenCarpetaRevivir(carpeta))}</small>
                     </span>
                 </button>
             `).join('');
@@ -5222,10 +5330,12 @@ const firebaseConfig = {
         function renderizarArchivosRevivir() {
             const contenedor = document.getElementById('revivir-archivos');
             const botonAgregar = document.getElementById('revivir-boton-agregar');
+            const botonPlay = document.getElementById('revivir-boton-play');
             const carpeta = obtenerCarpetaRevivirActiva();
             if (!contenedor) return;
 
             if (botonAgregar) botonAgregar.hidden = !carpeta;
+            if (botonPlay) botonPlay.hidden = !carpeta || !Array.isArray(carpeta.archivos) || !carpeta.archivos.length;
             if (!carpeta) {
                 contenedor.innerHTML = `<p class="revivir-vacio revivir-vacio-archivos">Seleccioná una carpeta del listado izquierdo.</p>`;
                 limpiarVisorRevivir();
@@ -5234,8 +5344,9 @@ const firebaseConfig = {
 
             sincronizarBibliotecaDesdeCarpetaRevivir();
             if (!bibliotecaRevivir.length) {
+                if (botonPlay) botonPlay.hidden = true;
                 contenedor.innerHTML = `<p class="revivir-vacio revivir-vacio-archivos">Todavía no hay archivos en esta carpeta. Usá AGREGAR ARCHIVO para sumar una foto, video o URL.</p>`;
-                limpiarVisorRevivir(`Carpeta: ${carpeta.nombre} · ${carpeta.ciudad}, ${carpeta.pais}`);
+                limpiarVisorRevivir(`Carpeta: ${carpeta.nombre} · ${carpeta.ciudad}, ${carpeta.pais} · Total carpeta: ${formatearTamanoBytesRevivir(calcularTamanoCarpetaRevivir(carpeta))}`);
                 return;
             }
 
@@ -5493,6 +5604,7 @@ const firebaseConfig = {
             indiceMediaRevivirActual = carpeta.archivos.length - 1;
             registrarCambioLocal(true);
             cerrarModalRevivir();
+            renderizarListaRevivir();
             renderizarArchivosRevivir();
             seleccionarMediaRevivir(indiceMediaRevivirActual);
         };
@@ -5607,15 +5719,16 @@ const firebaseConfig = {
                                 <h3 id="revivir-player-titulo">Tu momento especial</h3>
                                 <p id="revivir-player-meta">Seleccioná una carpeta para ver sus fotos y videos acá.</p>
                             </div>
-                            <button id="revivir-boton-agregar" type="button" class="btn-nueva-aventura revivir-agregar-btn revivir-boton-verde" onclick="agregarArchivoRevivir()" hidden>
-                                <i data-lucide="file-plus-2"></i> AGREGAR ARCHIVO
-                            </button>
+                            <div class="revivir-player-acciones">
+                                <button id="revivir-boton-play" type="button" class="btn-nueva-aventura revivir-play-btn" onclick="iniciarPresentacionRevivir()" hidden>
+                                    <i data-lucide="play"></i> Play
+                                </button>
+                                <button id="revivir-boton-agregar" type="button" class="btn-nueva-aventura revivir-agregar-btn revivir-boton-verde" onclick="agregarArchivoRevivir()" hidden>
+                                    <i data-lucide="file-plus-2"></i> AGREGAR ARCHIVO
+                                </button>
+                            </div>
                         </div>
                         <div id="revivir-archivos" class="revivir-archivos"></div>
-                        <div class="revivir-player-media">
-                            <img id="revivir-player-image" hidden alt="Vista previa en Revivir">
-                            <video id="revivir-player-video" hidden controls playsinline></video>
-                        </div>
                     </section>
                 </div>
             `;
