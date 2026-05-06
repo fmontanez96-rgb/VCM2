@@ -5206,7 +5206,7 @@ const firebaseConfig = {
             }
 
             lista.innerHTML = carpetasRevivir.map((carpeta) => `
-                <button type="button" class="revivir-carpeta ${carpeta.id === idCarpetaRevivirActiva ? 'activo' : ''}" onclick="seleccionarCarpetaRevivir('${escaparHtml(carpeta.id)}')">
+                <button type="button" class="revivir-carpeta ${carpeta.id === idCarpetaRevivirActiva ? 'activo' : ''}" onclick="seleccionarCarpetaRevivir('${escaparHtml(carpeta.id)}')" oncontextmenu="abrirMenuCarpetaRevivir(event, '${escaparHtml(carpeta.id)}')">
                     <img class="revivir-carpeta-miniatura" src="${escaparHtml(carpeta.portadaUrl)}" alt="Portada de ${escaparHtml(carpeta.nombre)}" loading="lazy">
                     <span class="revivir-carpeta-info">
                         <strong>${escaparHtml(carpeta.nombre)}</strong>
@@ -5250,34 +5250,36 @@ const firebaseConfig = {
             if (bibliotecaRevivir.length) seleccionarMediaRevivir(indiceMediaRevivirActual);
         };
 
-        window.crearCarpetaMemoriaRevivir = function() {
+        function abrirFormularioCarpetaRevivir(carpeta = null) {
+            const editando = Boolean(carpeta);
+            const idCarpeta = escaparHtml(carpeta?.id || '');
             abrirModalRevivir(`
                 <div class="revivir-modal-contenido" role="dialog" aria-modal="true" aria-labelledby="revivir-modal-carpeta-titulo">
                     <button type="button" class="revivir-modal-cerrar" aria-label="Cerrar" onclick="cerrarModalRevivir()">×</button>
                     <div class="revivir-modal-header">
-                        <i data-lucide="folder-plus"></i>
+                        <i data-lucide="${editando ? 'folder-pen' : 'folder-plus'}"></i>
                         <div>
-                            <h3 id="revivir-modal-carpeta-titulo">Crear carpeta</h3>
-                            <p>Guardá un viaje o recuerdo con la misma estética de Revivir.</p>
+                            <h3 id="revivir-modal-carpeta-titulo">${editando ? 'Editar carpeta' : 'Crear carpeta'}</h3>
+                            <p>${editando ? 'Actualizá los datos de esta carpeta sin perder sus archivos.' : 'Guardá un viaje o recuerdo con la misma estética de Revivir.'}</p>
                         </div>
                     </div>
-                    <form class="revivir-modal-form" onsubmit="guardarCarpetaMemoriaRevivir(event)">
+                    <form class="revivir-modal-form" onsubmit="guardarCarpetaMemoriaRevivir(event, '${idCarpeta}')">
                         <label>Nombre de la carpeta
-                            <input id="revivir-carpeta-nombre" type="text" required placeholder="Buenos Aires">
+                            <input id="revivir-carpeta-nombre" type="text" required placeholder="Buenos Aires" value="${escaparHtml(carpeta?.nombre || '')}">
                         </label>
                         <label>URL de portada
-                            <input id="revivir-carpeta-portada" type="url" required placeholder="https://...">
+                            <input id="revivir-carpeta-portada" type="url" required placeholder="https://..." value="${escaparHtml(carpeta?.portadaUrl || '')}">
                         </label>
                         <div class="revivir-modal-grid">
                             <label>Ciudad
-                                <input id="revivir-carpeta-ciudad" type="text" required placeholder="Buenos Aires">
+                                <input id="revivir-carpeta-ciudad" type="text" required placeholder="Buenos Aires" value="${escaparHtml(carpeta?.ciudad || '')}">
                             </label>
                             <label>País
-                                <input id="revivir-carpeta-pais" type="text" required placeholder="Argentina">
+                                <input id="revivir-carpeta-pais" type="text" required placeholder="Argentina" value="${escaparHtml(carpeta?.pais || '')}">
                             </label>
                         </div>
                         <label>Fecha
-                            <input id="revivir-carpeta-fecha" type="date" required value="${new Date().toISOString().slice(0, 10)}">
+                            <input id="revivir-carpeta-fecha" type="date" required value="${escaparHtml(carpeta?.fecha || new Date().toISOString().slice(0, 10))}">
                         </label>
                         <div class="revivir-modal-acciones">
                             <button type="button" class="btn-nueva-aventura revivir-modal-secundario" onclick="cerrarModalRevivir()">Cancelar</button>
@@ -5286,9 +5288,13 @@ const firebaseConfig = {
                     </form>
                 </div>
             `);
+        }
+
+        window.crearCarpetaMemoriaRevivir = function() {
+            abrirFormularioCarpetaRevivir();
         };
 
-        window.guardarCarpetaMemoriaRevivir = function(event) {
+        window.guardarCarpetaMemoriaRevivir = function(event, idCarpeta = '') {
             event.preventDefault();
             const nombre = document.getElementById('revivir-carpeta-nombre')?.value.trim();
             const portadaUrl = document.getElementById('revivir-carpeta-portada')?.value.trim();
@@ -5305,23 +5311,118 @@ const firebaseConfig = {
                 return;
             }
 
-            const nuevaCarpeta = {
-                id: crearIdRevivir('carpeta'),
-                nombre,
-                portadaUrl,
-                ciudad,
-                pais,
-                fecha,
-                archivos: []
-            };
+            const carpetaExistente = idCarpeta ? carpetasRevivir.find((carpeta) => carpeta.id === idCarpeta) : null;
+            if (carpetaExistente) {
+                Object.assign(carpetaExistente, { nombre, portadaUrl, ciudad, pais, fecha });
+                idCarpetaRevivirActiva = carpetaExistente.id;
+            } else {
+                const nuevaCarpeta = {
+                    id: crearIdRevivir('carpeta'),
+                    nombre,
+                    portadaUrl,
+                    ciudad,
+                    pais,
+                    fecha,
+                    archivos: []
+                };
+                carpetasRevivir.push(nuevaCarpeta);
+                idCarpetaRevivirActiva = nuevaCarpeta.id;
+                indiceMediaRevivirActual = -1;
+            }
 
-            carpetasRevivir.push(nuevaCarpeta);
-            idCarpetaRevivirActiva = nuevaCarpeta.id;
-            indiceMediaRevivirActual = -1;
             registrarCambioLocal(true);
             cerrarModalRevivir();
             renderizarListaRevivir();
             renderizarArchivosRevivir();
+        };
+
+        function abrirConfirmacionRevivir({ titulo, mensaje, textoConfirmar = 'Eliminar', icono = 'triangle-alert', onConfirm }) {
+            window.__confirmarAccionRevivir = () => {
+                if (typeof onConfirm === 'function') onConfirm();
+                window.__confirmarAccionRevivir = null;
+                cerrarModalRevivir();
+            };
+            abrirModalRevivir(`
+                <div class="revivir-modal-contenido revivir-confirmacion-contenido" role="dialog" aria-modal="true" aria-labelledby="revivir-confirmacion-titulo">
+                    <button type="button" class="revivir-modal-cerrar" aria-label="Cerrar" onclick="cerrarModalRevivir()">×</button>
+                    <div class="revivir-modal-header">
+                        <i data-lucide="${icono}"></i>
+                        <div>
+                            <h3 id="revivir-confirmacion-titulo">${escaparHtml(titulo)}</h3>
+                            <p>${escaparHtml(mensaje)}</p>
+                        </div>
+                    </div>
+                    <div class="revivir-modal-acciones">
+                        <button type="button" class="btn-nueva-aventura revivir-modal-secundario" onclick="cerrarModalRevivir()">Cancelar</button>
+                        <button type="button" class="btn-nueva-aventura revivir-modal-peligro" onclick="window.__confirmarAccionRevivir?.()"><i data-lucide="trash-2"></i> ${escaparHtml(textoConfirmar)}</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function eliminarArchivosDeCarpetaRevivir(carpeta) {
+            carpeta.archivos.forEach((item) => {
+                if (String(item.url || '').startsWith('blob:')) URL.revokeObjectURL(item.url);
+            });
+            carpeta.archivos = [];
+            indiceMediaRevivirActual = -1;
+            registrarCambioLocal(true);
+            renderizarListaRevivir();
+            renderizarArchivosRevivir();
+        }
+
+        window.abrirMenuCarpetaRevivir = function(event, idCarpeta) {
+            event.preventDefault();
+            event.stopPropagation();
+            const carpeta = carpetasRevivir.find((item) => item.id === idCarpeta);
+            if (!carpeta) return;
+            idCarpetaRevivirActiva = idCarpeta;
+            indiceMediaRevivirActual = -1;
+            renderizarListaRevivir();
+            renderizarArchivosRevivir();
+
+            document.getElementById('revivir-menu-carpeta')?.remove();
+            const menu = document.createElement('div');
+            menu.id = 'revivir-menu-carpeta';
+            menu.className = 'revivir-menu-carpeta';
+            menu.innerHTML = `
+                <button type="button" onclick="editarCarpetaRevivir('${escaparHtml(idCarpeta)}')"><i data-lucide="folder-pen"></i> Editar</button>
+                <button type="button" class="peligro" onclick="confirmarEliminarCarpetaRevivir('${escaparHtml(idCarpeta)}')"><i data-lucide="trash-2"></i> Eliminar</button>
+            `;
+            document.body.appendChild(menu);
+            const ancho = menu.offsetWidth;
+            const alto = menu.offsetHeight;
+            const x = Math.min(event.clientX, window.innerWidth - ancho - 12);
+            const y = Math.min(event.clientY, window.innerHeight - alto - 12);
+            menu.style.left = `${Math.max(12, x)}px`;
+            menu.style.top = `${Math.max(12, y)}px`;
+            lucide.createIcons();
+        };
+
+        window.editarCarpetaRevivir = function(idCarpeta) {
+            document.getElementById('revivir-menu-carpeta')?.remove();
+            const carpeta = carpetasRevivir.find((item) => item.id === idCarpeta);
+            if (carpeta) abrirFormularioCarpetaRevivir(carpeta);
+        };
+
+        window.confirmarEliminarCarpetaRevivir = function(idCarpeta) {
+            document.getElementById('revivir-menu-carpeta')?.remove();
+            const carpeta = carpetasRevivir.find((item) => item.id === idCarpeta);
+            if (!carpeta) return;
+            abrirConfirmacionRevivir({
+                titulo: 'Eliminar carpeta',
+                mensaje: `¿Seguro que querés eliminar la carpeta "${carpeta.nombre}" y todos sus archivos?`,
+                textoConfirmar: 'Eliminar',
+                onConfirm: () => {
+                    eliminarArchivosDeCarpetaRevivir(carpeta);
+                    carpetasRevivir = carpetasRevivir.filter((item) => item.id !== idCarpeta);
+                    idCarpetaRevivirActiva = carpetasRevivir[0]?.id || null;
+                    indiceMediaRevivirActual = -1;
+                    registrarCambioLocal(true);
+                    renderizarListaRevivir();
+                    renderizarArchivosRevivir();
+                }
+            });
         };
 
         window.agregarArchivoRevivir = function() {
@@ -5427,14 +5528,12 @@ const firebaseConfig = {
         window.limpiarMediaRevivir = function() {
             const carpeta = obtenerCarpetaRevivirActiva();
             if (!carpeta) return;
-            carpeta.archivos.forEach((item) => {
-                if (String(item.url || '').startsWith('blob:')) URL.revokeObjectURL(item.url);
+            abrirConfirmacionRevivir({
+                titulo: 'Eliminar archivos',
+                mensaje: `¿Seguro que querés eliminar todas las fotos y videos de la carpeta "${carpeta.nombre}"?`,
+                textoConfirmar: 'Eliminar',
+                onConfirm: () => eliminarArchivosDeCarpetaRevivir(carpeta)
             });
-            carpeta.archivos = [];
-            indiceMediaRevivirActual = -1;
-            registrarCambioLocal(true);
-            renderizarListaRevivir();
-            renderizarArchivosRevivir();
         };
 
         function renderizarPantallaRevivir() {
@@ -5450,11 +5549,11 @@ const firebaseConfig = {
                 <div class="encabezado-seccion encabezado-revivir" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
                     <h2 class="titulo-revivir"><i data-lucide="clapperboard"></i> Revivir</h2>
                     <div class="revivir-acciones">
-                        <button type="button" class="btn-nueva-aventura revivir-upload-btn" onclick="crearCarpetaMemoriaRevivir()">
+                        <button type="button" class="btn-nueva-aventura revivir-upload-btn revivir-boton-verde" onclick="crearCarpetaMemoriaRevivir()">
                             <i data-lucide="folder-plus"></i> Crear Carpeta
                         </button>
                         <button type="button" class="btn-nueva-aventura revivir-limpiar-btn" onclick="limpiarMediaRevivir()">
-                            <i data-lucide="trash-2"></i> Limpiar
+                            <i data-lucide="trash-2"></i> Eliminar
                         </button>
                     </div>
                 </div>
@@ -5467,7 +5566,7 @@ const firebaseConfig = {
                                 <h3 id="revivir-player-titulo">Tu momento especial</h3>
                                 <p id="revivir-player-meta">Seleccioná una carpeta para ver sus fotos y videos acá.</p>
                             </div>
-                            <button id="revivir-boton-agregar" type="button" class="btn-nueva-aventura revivir-agregar-btn" onclick="agregarArchivoRevivir()" hidden>
+                            <button id="revivir-boton-agregar" type="button" class="btn-nueva-aventura revivir-agregar-btn revivir-boton-verde" onclick="agregarArchivoRevivir()" hidden>
                                 <i data-lucide="file-plus-2"></i> AGREGAR ARCHIVO
                             </button>
                         </div>
@@ -5487,6 +5586,17 @@ const firebaseConfig = {
             }
             lucide.createIcons();
         }
+
+        document.addEventListener('click', (event) => {
+            const menuRevivir = document.getElementById('revivir-menu-carpeta');
+            if (menuRevivir && !menuRevivir.contains(event.target)) menuRevivir.remove();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                document.getElementById('revivir-menu-carpeta')?.remove();
+            }
+        });
 
         document.addEventListener("DOMContentLoaded", async () => {
             iniciarSincronizacionFirebase();

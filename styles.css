@@ -3068,3 +3068,80 @@
         flex-direction: column;
     }
 }
+
+/* Ajustes de interacción para Revivir */
+.revivir-agregar-btn[hidden] {
+    display: none !important;
+}
+.revivir-boton-verde {
+    border-color: rgba(178, 255, 196, 0.95);
+    background: linear-gradient(150deg, #e4ffe9 0%, #58d56e 36%, #159a35 70%, #baf8c6 100%);
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.88),
+        inset 0 -7px 12px rgba(11, 97, 36, 0.46),
+        0 7px 0 #08752a,
+        0 12px 24px rgba(18, 145, 58, 0.45);
+    text-shadow: 0 1px 0 rgba(5, 72, 24, 0.72);
+}
+.revivir-boton-verde:hover {
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.92),
+        inset 0 -7px 12px rgba(11, 97, 36, 0.46),
+        0 9px 0 #08752a,
+        0 16px 26px rgba(18, 145, 58, 0.5),
+        0 0 24px rgba(123, 255, 155, 0.55);
+}
+.revivir-confirmacion-contenido {
+    width: min(520px, 100%);
+    background:
+        radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.7) 0 10%, transparent 28%),
+        linear-gradient(160deg, #e4f3ff 0%, #c8e2ff 44%, #b4d3ff 100%);
+}
+.revivir-modal-peligro {
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.revivir-menu-carpeta {
+    position: fixed;
+    z-index: 3200;
+    min-width: 178px;
+    padding: 10px;
+    border: 2px solid rgba(79, 195, 247, 0.5);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.7) 0 8%, transparent 28%),
+        linear-gradient(160deg, #e4f3ff 0%, #c8e2ff 44%, #b4d3ff 100%);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.38), inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+}
+.revivir-menu-carpeta button {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: #1f3b65;
+    background: rgba(255, 255, 255, 0.62);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+}
+.revivir-menu-carpeta button + button {
+    margin-top: 8px;
+}
+.revivir-menu-carpeta button:hover {
+    background: rgba(255, 255, 255, 0.92);
+    transform: translateX(2px);
+}
+.revivir-menu-carpeta button.peligro {
+    color: #b71c1c;
+    background: rgba(255, 235, 238, 0.78);
+}
+.revivir-menu-carpeta button.peligro:hover {
+    background: rgba(255, 205, 210, 0.95);
+}
