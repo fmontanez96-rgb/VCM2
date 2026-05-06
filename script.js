@@ -25,6 +25,8 @@ const firebaseConfig = {
         let intervaloAutosave = null;
         let rutaEstadoFirebase = null;
         let estadoEdicionPortadaItinerario = {};
+        let carpetasRevivir = [];
+        let idCarpetaRevivirActiva = null;
         let bibliotecaRevivir = [];
         let indiceMediaRevivirActual = -1;
         let playersMusica = {};
@@ -149,6 +151,7 @@ const firebaseConfig = {
                 paisesVisitados,
                 provinciasVisitadas,
                 destinosSonados,
+                carpetasRevivir: obtenerCarpetasRevivirPersistentes(),
                 actualizadoEn: new Date().toISOString()
             };
         }
@@ -324,7 +327,8 @@ const firebaseConfig = {
             return JSON.stringify(serializarEstable({
                 paisesVisitados: estado.paisesVisitados || {},
                 provinciasVisitadas: estado.provinciasVisitadas || {},
-                destinosSonados: estado.destinosSonados || {}
+                destinosSonados: estado.destinosSonados || {},
+                carpetasRevivir: obtenerCarpetasRevivirPersistentes(estado.carpetasRevivir)
             }));
         }
 
@@ -346,12 +350,18 @@ const firebaseConfig = {
             paisesVisitados = estado?.paisesVisitados || {};
             provinciasVisitadas = estado?.provinciasVisitadas || {};
             destinosSonados = estado?.destinosSonados || {};
+            carpetasRevivir = normalizarCarpetasRevivir(estado?.carpetasRevivir);
+            if (idCarpetaRevivirActiva && !carpetasRevivir.some((carpeta) => carpeta.id === idCarpetaRevivirActiva)) {
+                idCarpetaRevivirActiva = carpetasRevivir[0]?.id || null;
+                indiceMediaRevivirActual = -1;
+            }
             normalizarColeccionMemorias();
             normalizarDestinosSonados();
             cargarMapa();
 
             const vistaRecuerdosActiva = document.getElementById('vista-vividas')?.classList.contains('pantalla-activa');
             const vistaSonadosActiva = document.getElementById('vista-por-vivir')?.classList.contains('pantalla-activa');
+            const vistaRevivirActiva = document.getElementById('vista-revivir')?.classList.contains('pantalla-activa');
 
             if (vistaRecuerdosActiva) {
                 if (estadoVistaRecuerdos.modo === 'detalle' && estadoVistaRecuerdos.idPais && paisesVisitados[estadoVistaRecuerdos.idPais]) {
@@ -374,6 +384,10 @@ const firebaseConfig = {
                 } else {
                     renderizarPantallaSonados();
                 }
+            }
+
+            if (vistaRevivirActiva) {
+                renderizarPantallaRevivir();
             }
         }
 
@@ -4943,6 +4957,97 @@ const firebaseConfig = {
             document.querySelectorAll('.btn-tipo-item').forEach(b => b.classList.remove('seleccionado'));
         };
 
+        function escaparHtml(valor = "") {
+            return String(valor ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function crearIdRevivir(prefijo = 'revivir') {
+            if (window.crypto?.randomUUID) return `${prefijo}-${window.crypto.randomUUID()}`;
+            return `${prefijo}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        }
+
+        function normalizarFechaRevivir(valor = "") {
+            const fecha = String(valor || "").trim();
+            if (!fecha) return "";
+            if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha;
+            const fechaParseada = new Date(fecha);
+            if (Number.isNaN(fechaParseada.getTime())) return "";
+            return fechaParseada.toISOString().slice(0, 10);
+        }
+
+        function normalizarUrlRevivir(valor = "") {
+            const url = String(valor || "").trim();
+            if (!url) return "";
+            return /^(https?:|blob:|data:)/i.test(url) ? url : "";
+        }
+
+        function normalizarTipoArchivoRevivir(tipo = "", url = "") {
+            const tipoLimpio = String(tipo || "").toLowerCase();
+            const urlLimpia = String(url || "").toLowerCase().split('?')[0];
+            if (tipoLimpio === 'video' || /\.(mp4|webm|ogg|mov|m4v)$/i.test(urlLimpia)) return 'video';
+            return 'imagen';
+        }
+
+        function normalizarArchivosRevivir(archivos = []) {
+            return (Array.isArray(archivos) ? archivos : [])
+                .map((archivo, index) => {
+                    const url = normalizarUrlRevivir(archivo?.url);
+                    if (!url) return null;
+                    const tipo = normalizarTipoArchivoRevivir(archivo?.tipo, url);
+                    return {
+                        id: archivo?.id || crearIdRevivir('archivo'),
+                        tipo,
+                        nombre: String(archivo?.nombre || `${tipo === 'video' ? 'Video' : 'Foto'} ${index + 1}`).trim(),
+                        url,
+                        size: Number(archivo?.size || 0),
+                        persistente: archivo?.persistente !== false && !url.startsWith('blob:')
+                    };
+                })
+                .filter(Boolean);
+        }
+
+        function normalizarCarpetasRevivir(carpetas = []) {
+            return (Array.isArray(carpetas) ? carpetas : [])
+                .map((carpeta) => ({
+                    id: carpeta?.id || crearIdRevivir('carpeta'),
+                    nombre: String(carpeta?.nombre || '').trim(),
+                    portadaUrl: normalizarUrlRevivir(carpeta?.portadaUrl || carpeta?.portada || ''),
+                    ciudad: String(carpeta?.ciudad || '').trim(),
+                    pais: String(carpeta?.pais || '').trim(),
+                    fecha: normalizarFechaRevivir(carpeta?.fecha || ''),
+                    archivos: normalizarArchivosRevivir(carpeta?.archivos)
+                }))
+                .filter((carpeta) => carpeta.nombre && carpeta.portadaUrl && carpeta.ciudad && carpeta.pais && carpeta.fecha);
+        }
+
+        function obtenerCarpetaRevivirActiva() {
+            return carpetasRevivir.find((carpeta) => carpeta.id === idCarpetaRevivirActiva) || null;
+        }
+
+        function obtenerCarpetasRevivirPersistentes(origen = carpetasRevivir) {
+            return normalizarCarpetasRevivir(origen).map((carpeta) => ({
+                ...carpeta,
+                archivos: carpeta.archivos.filter((archivo) => archivo.persistente !== false && !String(archivo.url || '').startsWith('blob:'))
+            }));
+        }
+
+        function sincronizarBibliotecaDesdeCarpetaRevivir() {
+            const carpeta = obtenerCarpetaRevivirActiva();
+            bibliotecaRevivir = carpeta?.archivos || [];
+            if (!bibliotecaRevivir.length) {
+                indiceMediaRevivirActual = -1;
+                return;
+            }
+            if (indiceMediaRevivirActual < 0 || indiceMediaRevivirActual >= bibliotecaRevivir.length) {
+                indiceMediaRevivirActual = 0;
+            }
+        }
+
         function detenerReproductorRevivir() {
             const video = document.getElementById('revivir-player-video');
             if (video) {
@@ -4964,6 +5069,7 @@ const firebaseConfig = {
         }
 
         function seleccionarMediaRevivir(index) {
+            sincronizarBibliotecaDesdeCarpetaRevivir();
             const media = bibliotecaRevivir[index];
             if (!media) return;
 
@@ -4976,8 +5082,9 @@ const firebaseConfig = {
             if (!img || !video || !titulo || !meta) return;
 
             titulo.textContent = media.nombre;
+            const carpeta = obtenerCarpetaRevivirActiva();
             const textoTamano = media.size ? ` · ${(media.size / 1024 / 1024).toFixed(2)} MB` : '';
-            meta.textContent = `${media.tipo === 'video' ? 'Video' : 'Imagen'}${textoTamano}`;
+            meta.textContent = `${media.tipo === 'video' ? 'Video' : 'Imagen'}${textoTamano}${carpeta ? ` · ${carpeta.ciudad}, ${carpeta.pais}` : ''}`;
 
             if (media.tipo === 'video') {
                 img.hidden = true;
@@ -4993,160 +5100,11 @@ const firebaseConfig = {
                 img.alt = media.nombre;
             }
 
-            document.querySelectorAll('.revivir-item').forEach((item, idx) => {
-                item.classList.toggle('activo', idx === index);
-            });
+            renderizarArchivosRevivir();
         }
 
-        function renderizarListaRevivir() {
-            const lista = document.getElementById('revivir-lista');
-            if (!lista) return;
-
-            if (!bibliotecaRevivir.length) {
-                lista.innerHTML = `<p class="revivir-vacio">Cargá una carpeta de memorias para empezar a revivir momentos ✨</p>`;
-                return;
-            }
-
-            lista.innerHTML = bibliotecaRevivir.map((item, index) => `
-                <button type="button" class="revivir-item ${index === indiceMediaRevivirActual ? 'activo' : ''}" onclick="seleccionarMediaRevivir(${index})">
-                    <i data-lucide="${obtenerIconoMediaRevivir(item.tipo)}"></i>
-                    <span class="revivir-item-texto">${item.nombre}</span>
-                </button>
-            `).join('');
-            lucide.createIcons();
-        }
-
-        function inferirTipoArchivoDriveRevivir(archivo = {}) {
-            const mime = String(archivo?.mimeType || '').toLowerCase();
-            const nombre = String(archivo?.name || '').toLowerCase();
-            if (mime.startsWith('video/') || /\.(mp4|webm|ogg|mov|m4v)$/.test(nombre)) return 'video';
-            if (mime.startsWith('image/') || /\.(avif|gif|jpe?g|png|svg|webp)$/.test(nombre)) return 'imagen';
-            return null;
-        }
-
-        function obtenerCarpetasMemoriaDisponiblesRevivir() {
-            const carpetas = [];
-
-            Object.entries(paisesVisitados || {}).forEach(([idPais, pais]) => {
-                const nombrePais = pais?.nombre || idPais;
-                (pais?.albumes || []).forEach((album) => {
-                    const url = resolverUrlDriveAlbum(album);
-                    if (!url || !/drive\.google\.com/i.test(url)) return;
-                    if (!/\/folders\//i.test(url) && !/embeddedfolderview/i.test(url)) return;
-                    const nombreCarpeta = album?.nombre || 'Carpeta compartida';
-                    carpetas.push({
-                        etiqueta: `${nombrePais} · ${nombreCarpeta}`,
-                        nombre: nombreCarpeta,
-                        url
-                    });
-                });
-            });
-
-            Object.entries(provinciasVisitadas || {}).forEach(([idPais, provincias]) => {
-                const nombrePais = paisesVisitados?.[idPais]?.nombre || idPais;
-                Object.values(provincias || {}).forEach((provincia) => {
-                    const nombreCiudad = provincia?.nombre || 'Ciudad';
-                    (provincia?.albumes || []).forEach((album) => {
-                        const url = resolverUrlDriveAlbum(album);
-                        if (!url || !/drive\.google\.com/i.test(url)) return;
-                        if (!/\/folders\//i.test(url) && !/embeddedfolderview/i.test(url)) return;
-                        const nombreCarpeta = album?.nombre || 'Carpeta compartida';
-                        carpetas.push({
-                            etiqueta: `${nombrePais} · ${nombreCiudad} · ${nombreCarpeta}`,
-                            nombre: nombreCarpeta,
-                            url
-                        });
-                    });
-                });
-            });
-
-            return carpetas;
-        }
-
-        window.cargarCarpetaMemoriaRevivir = async function() {
-            const carpetas = obtenerCarpetasMemoriaDisponiblesRevivir();
-            if (!carpetas.length) {
-                alert('No encontramos carpetas de memorias de ciudad para cargar.');
-                return;
-            }
-
-            const listado = carpetas
-                .slice(0, 25)
-                .map((carpeta, idx) => `${idx + 1}. ${carpeta.etiqueta}`)
-                .join('\n');
-            const seleccion = window.prompt(`Elegí una carpeta para revivir:\n\n${listado}\n\nEscribí el número de opción:`);
-            if (!seleccion) return;
-
-            const indice = Number.parseInt(seleccion, 10) - 1;
-            if (!Number.isInteger(indice) || indice < 0 || indice >= carpetas.length) {
-                alert('La opción ingresada no es válida.');
-                return;
-            }
-
-            const carpeta = carpetas[indice];
-            const resultado = await obtenerArchivosPublicosDeCarpetaDrive(carpeta.url);
-            const archivos = resultado?.archivos || [];
-
-            const nuevos = archivos
-                .map((archivo, index) => {
-                    const tipo = inferirTipoArchivoDriveRevivir(archivo);
-                    if (!tipo) return null;
-                    const exportacion = tipo === 'video' ? 'download' : 'view';
-                    return {
-                        tipo,
-                        nombre: archivo?.name || `${tipo === 'video' ? 'Video' : 'Foto'} ${index + 1}`,
-                        size: 0,
-                        url: `https://drive.google.com/uc?export=${exportacion}&id=${archivo.id}`
-                    };
-                })
-                .filter(Boolean);
-
-            if (!nuevos.length) {
-                alert('No se encontraron fotos o videos en esa carpeta.');
-                return;
-            }
-
-            bibliotecaRevivir.forEach((item) => {
-                if (String(item.url || '').startsWith('blob:')) URL.revokeObjectURL(item.url);
-            });
-            bibliotecaRevivir = nuevos;
-            indiceMediaRevivirActual = 0;
-            renderizarListaRevivir();
-            seleccionarMediaRevivir(0);
-        };
-
-        window.seleccionarMediaRevivir = seleccionarMediaRevivir;
-
-        window.cargarMediaRevivir = function(event) {
-            const archivos = Array.from(event?.target?.files || []);
-            if (!archivos.length) return;
-
-            const nuevos = archivos
-                .map((file) => ({
-                    tipo: obtenerTipoMediaRevivir(file),
-                    nombre: file.name,
-                    size: file.size,
-                    url: URL.createObjectURL(file)
-                }))
-                .filter((item) => item.tipo);
-
-            if (!nuevos.length) return;
-
-            bibliotecaRevivir.push(...nuevos);
-            if (indiceMediaRevivirActual === -1) {
-                indiceMediaRevivirActual = 0;
-            }
-            renderizarListaRevivir();
-            seleccionarMediaRevivir(indiceMediaRevivirActual);
-            event.target.value = '';
-        };
-
-        window.limpiarMediaRevivir = function() {
-            bibliotecaRevivir.forEach((item) => URL.revokeObjectURL(item.url));
-            bibliotecaRevivir = [];
-            indiceMediaRevivirActual = -1;
+        function limpiarVisorRevivir(mensaje = 'Seleccioná una carpeta para ver sus fotos y videos acá.') {
             detenerReproductorRevivir();
-
             const img = document.getElementById('revivir-player-image');
             const video = document.getElementById('revivir-player-video');
             const titulo = document.getElementById('revivir-player-titulo');
@@ -5155,38 +5113,220 @@ const firebaseConfig = {
                 img.hidden = true;
                 img.removeAttribute('src');
             }
-            if (video) {
-                video.hidden = true;
-            }
+            if (video) video.hidden = true;
             if (titulo) titulo.textContent = 'Tu momento especial';
-            if (meta) meta.textContent = 'Seleccioná una foto o video para verlo acá.';
+            if (meta) meta.textContent = mensaje;
+        }
+
+        function renderizarListaRevivir() {
+            const lista = document.getElementById('revivir-lista');
+            if (!lista) return;
+
+            carpetasRevivir = normalizarCarpetasRevivir(carpetasRevivir);
+            if (!carpetasRevivir.length) {
+                lista.innerHTML = `<p class="revivir-vacio">Creá una carpeta de memorias para empezar a revivir momentos ✨</p>`;
+                return;
+            }
+
+            lista.innerHTML = carpetasRevivir.map((carpeta) => `
+                <button type="button" class="revivir-carpeta ${carpeta.id === idCarpetaRevivirActiva ? 'activo' : ''}" onclick="seleccionarCarpetaRevivir('${escaparHtml(carpeta.id)}')">
+                    <img class="revivir-carpeta-miniatura" src="${escaparHtml(carpeta.portadaUrl)}" alt="Portada de ${escaparHtml(carpeta.nombre)}" loading="lazy">
+                    <span class="revivir-carpeta-info">
+                        <strong>${escaparHtml(carpeta.nombre)}</strong>
+                        <small>${escaparHtml(carpeta.ciudad)}, ${escaparHtml(carpeta.pais)} · ${escaparHtml(carpeta.fecha)}</small>
+                        <small>${carpeta.archivos.length} archivo${carpeta.archivos.length === 1 ? '' : 's'}</small>
+                    </span>
+                </button>
+            `).join('');
+        }
+
+        function renderizarArchivosRevivir() {
+            const contenedor = document.getElementById('revivir-archivos');
+            const botonAgregar = document.getElementById('revivir-boton-agregar');
+            const carpeta = obtenerCarpetaRevivirActiva();
+            if (!contenedor) return;
+
+            if (botonAgregar) botonAgregar.hidden = !carpeta;
+            if (!carpeta) {
+                contenedor.innerHTML = `<p class="revivir-vacio revivir-vacio-archivos">Seleccioná una carpeta del listado izquierdo.</p>`;
+                limpiarVisorRevivir();
+                return;
+            }
+
+            sincronizarBibliotecaDesdeCarpetaRevivir();
+            if (!bibliotecaRevivir.length) {
+                contenedor.innerHTML = `<p class="revivir-vacio revivir-vacio-archivos">Todavía no hay archivos en esta carpeta. Usá AGREGAR ARCHIVO para sumar una foto, video o URL.</p>`;
+                limpiarVisorRevivir(`Carpeta: ${carpeta.nombre} · ${carpeta.ciudad}, ${carpeta.pais}`);
+                return;
+            }
+
+            contenedor.innerHTML = bibliotecaRevivir.map((item, index) => `
+                <button type="button" class="revivir-item ${index === indiceMediaRevivirActual ? 'activo' : ''}" onclick="seleccionarMediaRevivir(${index})">
+                    <i data-lucide="${obtenerIconoMediaRevivir(item.tipo)}"></i>
+                    <span class="revivir-item-texto">${escaparHtml(item.nombre)}</span>
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        window.seleccionarCarpetaRevivir = function(idCarpeta) {
+            idCarpetaRevivirActiva = idCarpeta;
+            indiceMediaRevivirActual = -1;
+            sincronizarBibliotecaDesdeCarpetaRevivir();
             renderizarListaRevivir();
+            renderizarArchivosRevivir();
+            if (bibliotecaRevivir.length) seleccionarMediaRevivir(indiceMediaRevivirActual);
+        };
+
+        window.crearCarpetaMemoriaRevivir = function() {
+            const nombre = window.prompt('Nombre de la carpeta:');
+            if (!nombre?.trim()) return;
+            const portadaUrl = window.prompt('URL de portada de la carpeta:');
+            if (!/^https?:\/\//i.test(String(portadaUrl || '').trim())) {
+                alert('La portada debe ser una URL válida que empiece con http:// o https://.');
+                return;
+            }
+            const ciudad = window.prompt('Ciudad designada para esta carpeta:');
+            if (!ciudad?.trim()) return;
+            const pais = window.prompt('País designado para esta carpeta:');
+            if (!pais?.trim()) return;
+            const fecha = window.prompt('Fecha de la carpeta (AAAA-MM-DD):', new Date().toISOString().slice(0, 10));
+            if (!normalizarFechaRevivir(fecha)) {
+                alert('Ingresá una fecha válida con formato AAAA-MM-DD.');
+                return;
+            }
+
+            const nuevaCarpeta = {
+                id: crearIdRevivir('carpeta'),
+                nombre: nombre.trim(),
+                portadaUrl: portadaUrl.trim(),
+                ciudad: ciudad.trim(),
+                pais: pais.trim(),
+                fecha: normalizarFechaRevivir(fecha),
+                archivos: []
+            };
+
+            carpetasRevivir.push(nuevaCarpeta);
+            idCarpetaRevivirActiva = nuevaCarpeta.id;
+            indiceMediaRevivirActual = -1;
+            registrarCambioLocal(true);
+            renderizarListaRevivir();
+            renderizarArchivosRevivir();
+        };
+
+        window.agregarArchivoRevivir = function() {
+            const carpeta = obtenerCarpetaRevivirActiva();
+            if (!carpeta) {
+                alert('Primero seleccioná o creá una carpeta.');
+                return;
+            }
+
+            const url = window.prompt('Pegá una URL de imagen/video o dejalo vacío para elegir un archivo local:');
+            if (url === null) return;
+            if (url && url.trim()) {
+                const urlLimpia = normalizarUrlRevivir(url);
+                if (!urlLimpia || urlLimpia.startsWith('blob:') || urlLimpia.startsWith('data:')) {
+                    alert('Usá una URL pública que empiece con http:// o https://.');
+                    return;
+                }
+                const nombre = window.prompt('Nombre del archivo:', urlLimpia.split('/').pop()?.split('?')[0] || 'Archivo') || 'Archivo';
+                carpeta.archivos.push({
+                    id: crearIdRevivir('archivo'),
+                    tipo: normalizarTipoArchivoRevivir('', urlLimpia),
+                    nombre: nombre.trim(),
+                    url: urlLimpia,
+                    size: 0,
+                    persistente: true
+                });
+                indiceMediaRevivirActual = carpeta.archivos.length - 1;
+                registrarCambioLocal(true);
+                renderizarArchivosRevivir();
+                seleccionarMediaRevivir(indiceMediaRevivirActual);
+                return;
+            }
+
+            document.getElementById('revivir-input-media')?.click();
+        };
+
+        window.cargarMediaRevivir = function(event) {
+            const carpeta = obtenerCarpetaRevivirActiva();
+            if (!carpeta) {
+                alert('Primero seleccioná o creá una carpeta.');
+                event.target.value = '';
+                return;
+            }
+            const archivos = Array.from(event?.target?.files || []);
+            if (!archivos.length) return;
+
+            const nuevos = archivos
+                .map((file) => ({
+                    id: crearIdRevivir('archivo'),
+                    tipo: obtenerTipoMediaRevivir(file),
+                    nombre: file.name,
+                    size: file.size,
+                    url: URL.createObjectURL(file),
+                    persistente: false
+                }))
+                .filter((item) => item.tipo);
+
+            if (!nuevos.length) return;
+
+            carpeta.archivos.push(...nuevos);
+            indiceMediaRevivirActual = carpeta.archivos.length - nuevos.length;
+            renderizarArchivosRevivir();
+            seleccionarMediaRevivir(indiceMediaRevivirActual);
+            event.target.value = '';
+        };
+
+        window.limpiarMediaRevivir = function() {
+            const carpeta = obtenerCarpetaRevivirActiva();
+            if (!carpeta) return;
+            carpeta.archivos.forEach((item) => {
+                if (String(item.url || '').startsWith('blob:')) URL.revokeObjectURL(item.url);
+            });
+            carpeta.archivos = [];
+            indiceMediaRevivirActual = -1;
+            registrarCambioLocal(true);
+            renderizarListaRevivir();
+            renderizarArchivosRevivir();
         };
 
         function renderizarPantallaRevivir() {
             const contenedor = document.getElementById('vista-revivir');
             if (!contenedor) return;
 
+            if (!idCarpetaRevivirActiva && carpetasRevivir.length) {
+                idCarpetaRevivirActiva = carpetasRevivir[0].id;
+            }
+            sincronizarBibliotecaDesdeCarpetaRevivir();
+
             contenedor.innerHTML = `
                 <div class="encabezado-seccion encabezado-revivir" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
                     <h2 class="titulo-revivir"><i data-lucide="clapperboard"></i> Revivir</h2>
                     <div class="revivir-acciones">
-                        <label class="btn-nueva-aventura revivir-upload-btn" onclick="cargarCarpetaMemoriaRevivir()">
-                            <i data-lucide="folder-open"></i> Cargar carpeta
-                        </label>
+                        <button type="button" class="btn-nueva-aventura revivir-upload-btn" onclick="crearCarpetaMemoriaRevivir()">
+                            <i data-lucide="folder-plus"></i> Crear Carpeta
+                        </button>
                         <button type="button" class="btn-nueva-aventura revivir-limpiar-btn" onclick="limpiarMediaRevivir()">
                             <i data-lucide="trash-2"></i> Limpiar
                         </button>
                     </div>
                 </div>
 
+                <input id="revivir-input-media" type="file" accept="image/*,video/*" multiple onchange="cargarMediaRevivir(event)">
                 <div class="revivir-layout">
                     <aside id="revivir-lista" class="revivir-lista"></aside>
                     <section class="revivir-player">
                         <div class="revivir-player-head">
-                            <h3 id="revivir-player-titulo">Tu momento especial</h3>
-                            <p id="revivir-player-meta">Seleccioná una foto o video para verlo acá.</p>
+                            <div>
+                                <h3 id="revivir-player-titulo">Tu momento especial</h3>
+                                <p id="revivir-player-meta">Seleccioná una carpeta para ver sus fotos y videos acá.</p>
+                            </div>
+                            <button id="revivir-boton-agregar" type="button" class="btn-nueva-aventura revivir-agregar-btn" onclick="agregarArchivoRevivir()" hidden>
+                                <i data-lucide="file-plus-2"></i> AGREGAR ARCHIVO
+                            </button>
                         </div>
+                        <div id="revivir-archivos" class="revivir-archivos"></div>
                         <div class="revivir-player-media">
                             <img id="revivir-player-image" hidden alt="Vista previa en Revivir">
                             <video id="revivir-player-video" hidden controls playsinline></video>
@@ -5196,6 +5336,7 @@ const firebaseConfig = {
             `;
 
             renderizarListaRevivir();
+            renderizarArchivosRevivir();
             if (indiceMediaRevivirActual >= 0) {
                 seleccionarMediaRevivir(indiceMediaRevivirActual);
             }
