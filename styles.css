@@ -1633,8 +1633,6 @@
             display: block;
             object-fit: cover;
             background: #f0f9ff;
-            pointer-events: none;
-            user-select: none;
         }
         .tarjeta-foto-drive-video::after {
             content: 'VIDEO';
