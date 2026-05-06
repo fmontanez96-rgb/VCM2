@@ -3225,6 +3225,15 @@
     color: #536f8f;
     font-weight: 700;
 }
+.revivir-modal-estado-carga {
+    display: block;
+    margin-top: 6px;
+    color: #0d47a1;
+    font-weight: 900;
+}
+.revivir-modal-estado-carga[hidden] {
+    display: none;
+}
 .revivir-modal-acciones {
     display: flex;
     justify-content: flex-end;
