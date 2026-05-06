@@ -1619,13 +1619,16 @@
         .modal-vista-drive-titulo {
             width: 100%;
             margin: 0;
-            color: #073b66;
+            color: transparent;
+            background: linear-gradient(180deg, #ffffff 0%, #dbe2e8 20%, #7d8993 45%, #f9fbfd 60%, #aab5be 78%, #ffffff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
             font-family: 'Baloo 2', sans-serif;
             font-size: clamp(1.55rem, 4vw, 2.65rem);
             font-weight: 900;
             line-height: 1.08;
             text-align: center;
-            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.94), 0 3px 0 rgba(2, 34, 61, 0.58), 0 5px 5px rgba(1, 18, 34, 0.34), 0 0 10px rgba(163, 213, 244, 0.5);
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95), 0 3px 0 rgba(127, 139, 149, 0.74), 0 5px 4px rgba(43, 58, 70, 0.32), 0 0 12px rgba(255, 255, 255, 0.78);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1639,10 +1642,12 @@
             height: 100%;
             overflow-y: auto;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 190px));
+            justify-content: center;
+            gap: 16px;
             align-content: start;
-            padding-right: 4px;
+            padding: 12px 24px;
+            scrollbar-gutter: stable;
         }
         .tarjeta-foto-drive {
             position: relative;
@@ -1650,10 +1655,10 @@
             border-radius: 12px;
             overflow: hidden;
             padding: 0;
-            cursor: default;
+            cursor: pointer;
             background: #dff1ff;
             box-shadow: 0 8px 18px rgba(6, 65, 102, 0.18);
-            min-height: 160px;
+            aspect-ratio: 4 / 3;
         }
         .tarjeta-foto-drive img {
             width: 100%;
@@ -1661,6 +1666,10 @@
             display: block;
             object-fit: cover;
             background: #f0f9ff;
+            transition: filter 0.25s ease;
+        }
+        .tarjeta-foto-drive:hover img {
+            filter: brightness(1.12) saturate(1.08);
         }
         .tarjeta-foto-drive-video::after {
             content: 'VIDEO';
