@@ -1564,6 +1564,201 @@
         .btn-tab-memoria.tab-ver.activo {
             box-shadow: inset 0 2px 0 rgba(255,255,255,0.9), inset 0 -6px 10px rgba(12, 88, 23, 0.5), 0 8px 0 #186a22, 0 0 16px rgba(143, 255, 152, 0.92);
         }
+        .tabs-agregar-memoria-metal {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 22px;
+            padding: 7px;
+            border-radius: 16px;
+            background: linear-gradient(165deg, #f9fdff 0%, #e5f2fa 36%, #c5d9e6 70%, #ffffff 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.95), inset 0 -6px 12px rgba(64, 91, 111, 0.22), 0 10px 22px rgba(26, 52, 70, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+        }
+        .btn-subtab-memoria-metal {
+            flex: 1;
+            border: none;
+            border-radius: 12px;
+            padding: 11px 14px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.76);
+            opacity: 0.62;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.48);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+        }
+        .btn-subtab-memoria-metal svg {
+            width: 16px;
+            height: 16px;
+        }
+        .btn-subtab-drive {
+            background: linear-gradient(165deg, #e9fbff 0%, var(--secondary) 34%, #156f9c 68%, #9fe8ff 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.88), inset 0 -6px 10px rgba(7, 69, 105, 0.54), 0 7px 0 #0d5f89, 0 11px 18px rgba(0, 137, 209, 0.24);
+        }
+        .btn-subtab-historia {
+            background: linear-gradient(165deg, #ffe6ef 0%, var(--primary) 34%, #b71952 68%, #ff9fc0 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.88), inset 0 -6px 10px rgba(114, 11, 45, 0.54), 0 7px 0 #93143d, 0 11px 18px rgba(255, 64, 129, 0.24);
+        }
+        .btn-subtab-memoria-metal.activo,
+        .btn-subtab-memoria-metal:hover {
+            opacity: 1;
+            filter: brightness(1.08) saturate(1.08);
+            transform: translateY(-2px);
+        }
+        .btn-subtab-drive.activo,
+        .btn-subtab-drive:hover {
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.95), inset 0 -6px 10px rgba(7, 69, 105, 0.52), 0 8px 0 #0d5f89, 0 0 18px rgba(79, 195, 247, 0.78);
+        }
+        .btn-subtab-historia.activo,
+        .btn-subtab-historia:hover {
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.95), inset 0 -6px 10px rgba(114, 11, 45, 0.52), 0 8px 0 #93143d, 0 0 18px rgba(255, 102, 153, 0.78);
+        }
+        .btn-subtab-memoria-metal:active {
+            transform: translateY(1px);
+        }
+        .form-memoria-metal {
+            padding: 21px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.74);
+        }
+        .form-memoria-metal::before {
+            content: "";
+            position: absolute;
+            inset: 1px 1px auto 1px;
+            height: 44%;
+            border-radius: 15px 15px 44px 44px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+            pointer-events: none;
+        }
+        .form-memoria-drive {
+            background: linear-gradient(165deg, #f6fdff 0%, #d9f4ff 31%, #89d7f5 64%, #ffffff 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.92), inset 0 -8px 14px rgba(13, 95, 137, 0.22), 0 12px 26px rgba(13, 95, 137, 0.2);
+        }
+        .form-memoria-historia {
+            background: linear-gradient(165deg, #fff7fa 0%, #ffe0eb 31%, #ff98bb 64%, #ffffff 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.92), inset 0 -8px 14px rgba(147, 20, 61, 0.22), 0 12px 26px rgba(147, 20, 61, 0.2);
+        }
+        .form-memoria-metal.oculto {
+            display: none;
+        }
+        .titulo-form-memoria-metal {
+            margin-top: 0;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            z-index: 1;
+            font-weight: 900;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 2px 8px rgba(0, 0, 0, 0.16);
+        }
+        .titulo-form-drive {
+            color: #0d6f9f;
+        }
+        .titulo-form-historia {
+            color: #b71952;
+        }
+        .campos-memoria-metal {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        .campo-memoria-metal {
+            width: 100%;
+            padding: 12px 13px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            font-family: inherit;
+            color: #263238;
+            background: linear-gradient(165deg, #ffffff 0%, #f2fbff 42%, #dcecf4 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), inset 0 -4px 8px rgba(75, 110, 130, 0.14), 0 5px 12px rgba(30, 60, 80, 0.11);
+            transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+        }
+        .campo-memoria-metal:focus {
+            outline: none;
+            border-color: rgba(79, 195, 247, 0.85);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.96), inset 0 -4px 8px rgba(75, 110, 130, 0.12), 0 0 0 3px rgba(79, 195, 247, 0.22), 0 6px 14px rgba(30, 60, 80, 0.13);
+            transform: translateY(-1px);
+        }
+        .campo-memoria-flex {
+            flex: 1;
+        }
+        .textarea-memoria-metal {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .label-memoria-metal {
+            font-size: 0.9rem;
+            color: #405d6d;
+            font-weight: 800;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78);
+        }
+        .campo-archivo-memoria-metal {
+            display: block;
+            margin-top: 6px;
+            width: 100%;
+            font-family: inherit;
+            color: #405d6d;
+        }
+        .fila-guardar-memoria-metal {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-guardar-memoria-metal {
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 900;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            align-self: flex-end;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .btn-guardar-drive {
+            background: linear-gradient(165deg, #e9fbff 0%, var(--secondary) 34%, #156f9c 68%, #9fe8ff 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), inset 0 -6px 10px rgba(7, 69, 105, 0.55), 0 7px 0 #0d5f89, 0 11px 18px rgba(0, 137, 209, 0.24);
+        }
+        .btn-guardar-historia {
+            background: linear-gradient(165deg, #ffe6ef 0%, var(--primary) 34%, #b71952 68%, #ff9fc0 100%);
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), inset 0 -6px 10px rgba(114, 11, 45, 0.55), 0 7px 0 #93143d, 0 11px 18px rgba(255, 64, 129, 0.24);
+        }
+        .btn-guardar-memoria-metal:hover {
+            filter: brightness(1.08) saturate(1.08);
+            transform: translateY(-2px);
+        }
+        .btn-guardar-drive:hover {
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.96), inset 0 -6px 10px rgba(7, 69, 105, 0.53), 0 8px 0 #0d5f89, 0 0 18px rgba(79, 195, 247, 0.78);
+        }
+        .btn-guardar-historia:hover {
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.96), inset 0 -6px 10px rgba(114, 11, 45, 0.53), 0 8px 0 #93143d, 0 0 18px rgba(255, 102, 153, 0.78);
+        }
+        .btn-guardar-memoria-metal:active {
+            transform: translateY(1px);
+        }
+        @media (max-width: 640px) {
+            .tabs-agregar-memoria-metal,
+            .fila-guardar-memoria-metal {
+                flex-direction: column;
+            }
+            .btn-guardar-memoria-metal {
+                width: 100%;
+            }
+        }
         .modal-vista-drive-fondo {
             position: fixed;
             inset: 0;
