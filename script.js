@@ -259,6 +259,70 @@ const firebaseConfig = {
             });
         }
 
+        function limpiarInformacionDestinoVisitado(destino) {
+            if (!destino || typeof destino !== "object") return 0;
+
+            const memoriasPrevias = contarMemoriasDestino(destino);
+            destino.albumes = [];
+            destino.historias = [];
+            destino.musica = null;
+            destino.portadaUrl = "";
+            delete destino.drives;
+            delete destino.notas;
+
+            return memoriasPrevias;
+        }
+
+        window.eliminarTodasLasMemorias = function() {
+            const totalPaises = Object.keys(paisesVisitados || {}).length;
+            const totalCiudades = Object.values(provinciasVisitadas || {}).reduce((total, provinciasPais) => {
+                if (!provinciasPais || typeof provinciasPais !== "object") return total;
+                return total + Object.keys(provinciasPais).length;
+            }, 0);
+
+            if (!totalPaises && !totalCiudades) {
+                alert("No hay países ni ciudades visitadas para limpiar.");
+                return;
+            }
+
+            const confirmar = window.confirm(
+                `¿Seguro que querés borrar TODAS las memorias guardadas?\n\n` +
+                `Se vaciarán álbumes, historias, música y portadas de ${totalCiudades} ciudad${totalCiudades === 1 ? '' : 'es'} y ${totalPaises} país${totalPaises === 1 ? '' : 'es'}.\n` +
+                `Las ciudades y países van a seguir marcados como visitados.`
+            );
+
+            if (!confirmar) return;
+
+            normalizarColeccionMemorias();
+            let totalMemoriasEliminadas = 0;
+
+            Object.values(paisesVisitados || {}).forEach((destinoPais) => {
+                totalMemoriasEliminadas += limpiarInformacionDestinoVisitado(destinoPais);
+            });
+
+            Object.values(provinciasVisitadas || {}).forEach((provinciasPais) => {
+                if (!provinciasPais || typeof provinciasPais !== "object") return;
+                Object.values(provinciasPais).forEach((destinoProvincia) => {
+                    totalMemoriasEliminadas += limpiarInformacionDestinoVisitado(destinoProvincia);
+                });
+            });
+
+            estadoVistaRecuerdos = { modo: 'lista', idPais: null, idProvincia: null, submodo: 'ver', seccionNuevo: 'drive' };
+            limpiarPlayersMusica();
+            registrarCambioLocal(true);
+            cargarMapa();
+
+            if (document.getElementById('vista-vividas')?.classList.contains('pantalla-activa')) {
+                renderizarPantallaRecuerdos();
+            }
+
+            mostrarToastExito(
+                totalMemoriasEliminadas > 0
+                    ? `Se borraron ${totalMemoriasEliminadas} memoria${totalMemoriasEliminadas === 1 ? '' : 's'}. Los destinos siguen visitados.`
+                    : 'Se limpiaron los destinos visitados. No había memorias cargadas.'
+            );
+        };
+
 
         function posicionarMenuContextual(menu, x, y, contenedorMapa) {
             const menuWidth = menu.node().offsetWidth;

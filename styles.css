@@ -55,7 +55,7 @@
         }
         .icono-magia { color: #FFCA28; fill: #FFE082; }
 
-        .menu-lateral { display: flex; flex-direction: column; gap: 18px; }
+        .menu-lateral { display: flex; flex: 1; flex-direction: column; gap: 18px; }
 
         .btn-menu {
             background: #1A2C40; border: 2px solid #35506E; color: #F8BBD0;
@@ -67,6 +67,21 @@
 
         .btn-menu:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 20px var(--btn-glow); border-color: #F06292; }
         .btn-menu.activo { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 25px var(--btn-glow), 0 8px 15px rgba(255, 64, 129, 0.3); transform: translateY(-2px); }
+        .btn-menu-peligro {
+            margin-top: auto;
+            background: linear-gradient(135deg, rgba(90, 22, 32, 0.96), rgba(150, 24, 48, 0.92));
+            border-color: #FF8A9C;
+            color: #FFE5EA;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 18px rgba(120, 0, 24, 0.28);
+        }
+        .btn-menu-peligro:hover {
+            border-color: #FFCDD2;
+            box-shadow: 0 8px 20px rgba(239, 83, 80, 0.55), 0 0 18px rgba(255, 138, 156, 0.35);
+        }
+        .btn-menu-peligro i {
+            color: #FFD1D9;
+            stroke-width: 2.6px;
+        }
         .btn-menu[data-target="vista-vividas"] i {
             color: #ff4f9a;
             fill: rgba(255, 96, 171, 0.25);
