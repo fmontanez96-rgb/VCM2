@@ -2862,19 +2862,51 @@ const firebaseConfig = {
                     const idArchivo = String(archivo.id || '').trim();
                     const mimeType = String(archivo.mimeType || '').trim().toLowerCase();
                     const esVideo = mimeType.startsWith('video/');
+                    const tipoMedia = esVideo ? 'video' : 'image';
                     const urlImagen = `https://drive.google.com/uc?export=view&id=${idArchivo}`;
+                    const urlVideo = `https://drive.google.com/file/d/${idArchivo}/preview`;
+                    const urlMedia = esVideo ? urlVideo : urlImagen;
                     const etiquetaBase = String(archivo.name || '').trim() || (esVideo ? `Video ${index + 1}` : `Foto ${index + 1}`);
                     const etiqueta = escaparHtmlPlano(etiquetaBase);
                     return `
-                        <div
+                        <button
+                            type="button"
                             class="tarjeta-foto-drive ${esVideo ? 'tarjeta-foto-drive-video' : ''}"
-                            aria-label="${escAttr(etiquetaBase)}">
+                            aria-label="${escAttr(etiquetaBase)}"
+                            data-media-url="${escAttr(urlMedia)}"
+                            data-media-title="${escAttr(etiquetaBase)}"
+                            data-media-type="${tipoMedia}">
                             <img src="${escAttr(urlImagen)}" alt="${etiqueta}" loading="lazy" referrerpolicy="no-referrer">
-                        </div>
+                        </button>
                     `;
                 }).join('');
 
             return `<div class="galeria-fotos-drive">${tarjetas}</div>`;
+        }
+
+        function inicializarEventosGaleriaDrive(contenedor) {
+            if (!contenedor) return;
+
+            contenedor.querySelectorAll('.tarjeta-foto-drive').forEach((tarjeta) => {
+                if (tarjeta.dataset.eventoGaleriaDrive === 'true') return;
+
+                tarjeta.addEventListener('click', () => {
+                    const tipo = String(tarjeta.dataset.mediaType || 'image').toLowerCase();
+                    const url = tarjeta.dataset.mediaUrl || '';
+                    const titulo = tarjeta.dataset.mediaTitle || (tipo === 'video' ? 'Video' : 'Foto');
+
+                    if (!url) return;
+
+                    if (tipo === 'video') {
+                        mostrarModalVistaVideo(url, titulo);
+                        return;
+                    }
+
+                    mostrarModalVistaImagen(url, titulo);
+                });
+
+                tarjeta.dataset.eventoGaleriaDrive = 'true';
+            });
         }
 
         function cerrarModalVistaDrive() {
@@ -2888,7 +2920,8 @@ const firebaseConfig = {
         }
 
         function manejarEscapeModalDrive(event) {
-            if (event.key === 'Escape') cerrarModalVistaDrive();
+            const lightboxActivo = document.getElementById('media-lightbox')?.classList.contains('activo');
+            if (event.key === 'Escape' && !lightboxActivo) cerrarModalVistaDrive();
         }
 
         async function mostrarModalVistaDrive(urlDrive, titulo = "Carpeta compartida") {
@@ -2957,6 +2990,7 @@ const firebaseConfig = {
             btnCerrarSuperior?.addEventListener('click', cerrarModalVistaDrive);
             btnCerrar?.addEventListener('click', cerrarModalVistaDrive);
             btnExterno?.addEventListener('click', () => window.open(urlDrive, '_blank', 'noopener,noreferrer'));
+            inicializarEventosGaleriaDrive(contenedorCuerpo);
             modal.addEventListener('click', (event) => {
                 if (event.target === modal) cerrarModalVistaDrive();
             });
@@ -2965,6 +2999,7 @@ const firebaseConfig = {
                 if (!contenedorCuerpo || !modal.isConnected) return;
                 contenedorCuerpo.innerHTML = html;
                 lucide.createIcons();
+                inicializarEventosGaleriaDrive(contenedorCuerpo);
             };
 
             const timeoutMs = 5000;
@@ -3056,7 +3091,9 @@ const firebaseConfig = {
                 frameVideo.hidden = true;
             }
 
-            document.body.classList.remove('sin-scroll');
+            if (!document.getElementById('modal-vista-drive')) {
+                document.body.classList.remove('sin-scroll');
+            }
             document.removeEventListener('keydown', manejarEscapeModalImagen);
         }
 
