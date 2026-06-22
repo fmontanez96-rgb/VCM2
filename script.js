@@ -1,13 +1,4 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyB3KdarawI0Ch0HYOQo6LXkDP5Zclui0yI",
-  authDomain: "carolandia-199a5.firebaseapp.com",
-  databaseURL: "https://carolandia-199a5-default-rtdb.firebaseio.com",
-  projectId: "carolandia-199a5",
-  storageBucket: "carolandia-199a5.firebasestorage.app",
-  messagingSenderId: "940168409879",
-  appId: "1:940168409879:web:cde4e3bd76a934f4e47d52",
-  measurementId: "G-HEDFE5BZ7X"
-};
+
         lucide.createIcons();
 
         // BASES DE DATOS EN MEMORIA
@@ -17,35 +8,12 @@ const firebaseConfig = {
         let estadoVistaRecuerdos = { modo: 'lista', idPais: null, idProvincia: null, submodo: 'ver', seccionNuevo: 'drive' };
         let estadoVistaSonados = { modo: 'lista', idPais: null };
         let estadoVistaItinerario = { modo: 'lista', idPais: null };
-        let firebaseDb = null;
-        let estadoInicialSincronizado = false;
-        let ultimaHuellaSincronizada = "";
         let sincronizacionLocalEnCurso = false;
-        let hayCambiosPendientesDeSincronizar = false;
-        let intervaloAutosave = null;
-        let rutaEstadoFirebase = null;
         let estadoEdicionPortadaItinerario = {};
-        let carpetasRevivir = [];
-        let idCarpetaRevivirActiva = null;
-        let bibliotecaRevivir = [];
-        let indiceMediaRevivirActual = -1;
-        let temporizadorPresentacionRevivir = null;
-        let presentacionActivaRevivir = false;
         let playersMusica = {};
         window.playersMusica = playersMusica;
         let youtubeApiPromise = null;
         let youtubeApiReadyResolver = null;
-        let controladorCargaVistaDrive = null;
-        const LIMITE_ESTADO_FIREBASE_BYTES = 8 * 1024 * 1024;
-        const LIMITE_IMAGEN_FIREBASE_BYTES = 350 * 1024;
-        const CONFIG_VISTA_DRIVE = Object.freeze({
-            permitirAbrirEnPestana: true,
-            apiFolderImagesEndpoint: typeof window !== 'undefined' && window.__DRIVE_FOLDER_IMAGES_API__
-                ? String(window.__DRIVE_FOLDER_IMAGES_API__).trim()
-                : '/api/drive-folder-images'
-        });
-
-        const RUTA_ESTADO_COMPARTIDO = "nuestraHistoria/estadoCompartido";
 
         function cargarYoutubeIframeApiUnaVez() {
             if (window.YT && typeof window.YT.Player === 'function') {
@@ -143,18 +111,14 @@ const firebaseConfig = {
             if (typeof player.playVideo === 'function') player.playVideo();
         };
 
-        function obtenerRutaEstadoFirebase(uid = "") {
-            return RUTA_ESTADO_COMPARTIDO;
-        }
+    
         const ESTADOS_PROVINCIAS_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
         function obtenerEstadoActual() {
             normalizarColeccionMemorias();
             return {
                 paisesVisitados,
                 provinciasVisitadas,
-                destinosSonados,
-                carpetasRevivir: obtenerCarpetasRevivirPersistentes(),
-                actualizadoEn: new Date().toISOString()
+                destinosSonados
             };
         }
 
@@ -169,68 +133,6 @@ const firebaseConfig = {
             const totalNotas = Array.isArray(destino?.notas) ? destino.notas.length : 0;
 
             return totalAlbumes + totalHistorias + totalDrives + totalNotas;
-        }
-
-        function resolverUrlDriveAlbum(album = {}) {
-            if (!album || typeof album !== "object") return "";
-
-            const portada = typeof album.portada === "string" ? album.portada.trim() : "";
-            const candidatos = [
-                album.driveUrl,
-                album.url,
-                album.link,
-                album.enlace,
-                album.carpetaUrl,
-                album.carpeta
-            ]
-                .map((valor) => typeof valor === "string" ? valor.trim() : "")
-                .filter(Boolean);
-
-            if (!candidatos.length) return "";
-
-            const esDrive = (valor) => valor.includes("drive.google.com");
-
-            const urlDriveDistintaPortada = candidatos.find((valor) => esDrive(valor) && (!portada || valor !== portada));
-            if (urlDriveDistintaPortada) return urlDriveDistintaPortada;
-
-            const urlDrive = candidatos.find(esDrive);
-            if (urlDrive) return urlDrive;
-
-            return candidatos.find((valor) => !portada || valor !== portada) || candidatos[0];
-        }
-
-        function extraerIdDriveDesdeUrl(url = "") {
-            const valor = String(url || "").trim();
-            if (!valor) return null;
-
-            const patrones = [
-                /\/folders\/([a-zA-Z0-9_-]+)/i,
-                /[?&]id=([a-zA-Z0-9_-]+)/i,
-                /\/file\/d\/([a-zA-Z0-9_-]+)/i,
-                /\/document\/d\/([a-zA-Z0-9_-]+)/i,
-                /\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/i,
-                /\/presentation\/d\/([a-zA-Z0-9_-]+)/i
-            ];
-
-            for (const patron of patrones) {
-                const match = valor.match(patron);
-                if (match?.[1]) return match[1];
-            }
-            return null;
-        }
-
-        function construirUrlDriveEmbebida(urlDrive = "") {
-            const url = String(urlDrive || "").trim();
-            if (!url || !url.includes("drive.google.com")) return "";
-
-            const idDrive = extraerIdDriveDesdeUrl(url);
-            if (!idDrive) return "";
-
-            const esCarpeta = /\/folders\//i.test(url) || /embeddedfolderview/i.test(url);
-            if (esCarpeta) {
-                return `https://drive.google.com/embeddedfolderview?id=${idDrive}#grid`;
-            }
-            return `https://drive.google.com/file/d/${idDrive}/preview`;
         }
 
         function normalizarMemoriasDestino(destino) {
@@ -360,18 +262,29 @@ const firebaseConfig = {
         function normalizarPortadaUrl(valor = "") {
             const url = String(valor || "").trim();
             if (!url) return "";
+            if (/^portadas\//i.test(url)) return url;
             if (!/^https?:\/\//i.test(url)) return "";
             return url;
         }
 
+        function generarRutaPortadaLocal(nombre) {
+            if (!nombre) return "";
+            const limpio = String(nombre).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "");
+            return `portadas/${limpio}.jpg`;
+        }
+
         function obtenerPortadaPais(idPais = "") {
-            const portadaPais = paisesVisitados?.[idPais]?.portadaUrl;
-            return normalizarPortadaUrl(portadaPais);
+            const pais = paisesVisitados?.[idPais];
+            const portadaPais = pais?.portadaUrl;
+            return normalizarPortadaUrl(portadaPais) || generarRutaPortadaLocal(pais?.nombre);
         }
 
         function obtenerPortadaCiudad(idPais = "", idProvincia = "") {
-            const portadaCiudad = provinciasVisitadas?.[idPais]?.[idProvincia]?.portadaUrl;
-            return normalizarPortadaUrl(portadaCiudad) || obtenerPortadaPais(idPais);
+            const ciudad = provinciasVisitadas?.[idPais]?.[idProvincia];
+            const portadaCiudad = ciudad?.portadaUrl;
+            if (normalizarPortadaUrl(portadaCiudad)) return normalizarPortadaUrl(portadaCiudad);
+            if (ciudad?.nombre) return generarRutaPortadaLocal(ciudad?.nombre);
+            return obtenerPortadaPais(idPais);
         }
 
         function serializarEstable(valor) {
@@ -856,117 +769,29 @@ const firebaseConfig = {
                 `Precio por persona: ${formatearMonedaItinerario(item.costo ?? item.precio ?? 0)}`
             ];
         }
-        function guardarEstadoEnFirebase(forzar = false) {
-            if (!firebaseDb || !rutaEstadoFirebase) return Promise.resolve(false);
-            if (!estadoInicialSincronizado) {
-                hayCambiosPendientesDeSincronizar = true;
-                return Promise.resolve(false);
-            }
-
-            normalizarColeccionMemorias();
-            const estado = obtenerEstadoActual();
-            const bytesEstado = estimarBytesEstado(estado);
-            if (bytesEstado > LIMITE_ESTADO_FIREBASE_BYTES) {
-                console.error(`Estado demasiado grande para Firebase (${bytesEstado} bytes). Reduce imágenes o historias.`);
-                return Promise.resolve(false);
-            }
-            const huellaActual = calcularHuellaEstado(estado);
-            if (!forzar && huellaActual === ultimaHuellaSincronizada) return Promise.resolve(true);
-            sincronizacionLocalEnCurso = true;
-            hayCambiosPendientesDeSincronizar = false;
-
-            return firebaseDb.ref(rutaEstadoFirebase).set(estado)
-                .then(() => {
-                    ultimaHuellaSincronizada = huellaActual;
-                    return true;
-                })
-                .catch((error) => {
-                    console.error("No se pudo guardar en Firebase:", error);
-                    hayCambiosPendientesDeSincronizar = true;
-                    return false;
-                });
-        }
-
-        function registrarCambioLocal(forzarGuardado = false) {
-            sincronizacionLocalEnCurso = true;
-            hayCambiosPendientesDeSincronizar = true;
-            if (forzarGuardado) {
-                guardarEstadoEnFirebase(true);
-            }
-        }
-
-        function marcarEstadoInicialSincronizado() {
-            estadoInicialSincronizado = true;
-            if (hayCambiosPendientesDeSincronizar) {
-                guardarEstadoEnFirebase(true);
+        function registrarCambioLocal() {
+            try {
+                const estado = obtenerEstadoActual();
+                localStorage.setItem('mi_historia_viajes', JSON.stringify(estado));
+            } catch (error) {
+                console.error("Error al guardar en localStorage:", error);
             }
         }
 
         function iniciarSincronizacionFirebase() {
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
+            const estadoGuardado = localStorage.getItem('mi_historia_viajes');
+            if (estadoGuardado) {
+                try {
+                    const estado = JSON.parse(estadoGuardado);
+                    aplicarEstadoRemoto(estado);
+                } catch (e) {
+                    console.error("Error al cargar estado desde localStorage:", e);
+                    cargarMapa();
                 }
-
-                const auth = firebase.auth();
-                firebaseDb = firebase.database();
-
-                auth.onAuthStateChanged((usuario) => {
-                    if (!usuario) {
-                        auth.signInAnonymously().catch((error) => {
-                            console.error("No se pudo iniciar sesión anónima en Firebase:", error);
-                            sincronizarEstadoConRutaPublica();
-                        });
-                        return;
-                    }
-
-                    const nuevaRutaEstado = obtenerRutaEstadoFirebase(usuario.uid);
-                    if (rutaEstadoFirebase) {
-                        firebaseDb.ref(rutaEstadoFirebase).off("value");
-                    }
-                    rutaEstadoFirebase = nuevaRutaEstado;
-
-                    firebaseDb.ref(rutaEstadoFirebase).on("value", (snapshot) => {
-                        const estadoRemoto = snapshot.val();
-                        if (estadoRemoto) {
-                            const huellaRemota = calcularHuellaEstado(estadoRemoto);
-                            const huellaLocal = calcularHuellaEstado();
-                            if (sincronizacionLocalEnCurso && huellaRemota === huellaLocal) {
-                                sincronizacionLocalEnCurso = false;
-                                ultimaHuellaSincronizada = huellaRemota;
-                                return;
-                            }
-                            if (sincronizacionLocalEnCurso) {
-                                return;
-                            }
-                            if (huellaRemota !== ultimaHuellaSincronizada) {
-                                ultimaHuellaSincronizada = huellaRemota;
-                                aplicarEstadoRemoto(estadoRemoto);
-                            }
-                        } else {
-                            cargarMapa();
-                            renderizarPantallaRecuerdos();
-                            renderizarPantallaSonados();
-                            marcarEstadoInicialSincronizado();
-                            guardarEstadoEnFirebase(true);
-                        }
-
-                        marcarEstadoInicialSincronizado();
-                    }, (error) => {
-                        console.error("Error al leer estado desde Firebase:", error);
-                        marcarEstadoInicialSincronizado();
-                        cargarMapa();
-                    });
-
-                    if (!intervaloAutosave) {
-                        intervaloAutosave = setInterval(() => guardarEstadoEnFirebase(), 1200);
-                        window.addEventListener("beforeunload", () => guardarEstadoEnFirebase(true));
-                    }
-                });
-            } catch (error) {
-                console.error("No se pudo inicializar Firebase:", error);
-                marcarEstadoInicialSincronizado();
+            } else {
                 cargarMapa();
+                if (typeof renderizarPantallaRecuerdos === 'function') renderizarPantallaRecuerdos();
+                if (typeof renderizarPantallaSonados === 'function') renderizarPantallaSonados();
             }
         }
 
@@ -2786,8 +2611,14 @@ const firebaseConfig = {
         window.abrirMemoriaDrive = function(idPais, idProvincia = null, index) {
             const destino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
             const album = destino?.albumes?.[index];
-            const urlDrive = resolverUrlDriveAlbum(album);
             const titulo = album?.nombre || "Carpeta compartida";
+
+            if (album && album.fotosLocales && album.fotosLocales.length > 0) {
+                mostrarModalVistaLocal(album.fotosLocales, titulo);
+                return;
+            }
+
+            const urlDrive = resolverUrlDriveAlbum(album);
 
             const tipoMultimedia = resolverTipoMultimedia(album, urlDrive);
             if (tipoMultimedia === 'imagen') {
@@ -2847,281 +2678,6 @@ const firebaseConfig = {
             return convertirUrlDriveDirecta(valor, tipo);
         }
 
-        function construirUrlApiCarpetaDrive(idCarpeta = "") {
-            const id = String(idCarpeta || "").trim();
-            const endpointBase = String(CONFIG_VISTA_DRIVE?.apiFolderImagesEndpoint || "").trim();
-            if (!id || !endpointBase) return "";
-
-            if (window?.location?.hostname?.endsWith('github.io') && endpointBase.startsWith('/api/')) {
-                return "";
-            }
-
-            const separador = endpointBase.includes('?') ? '&' : '?';
-            return `${endpointBase}${separador}id=${encodeURIComponent(id)}`;
-        }
-
-        async function obtenerArchivosPublicosDeCarpetaDrive(urlDrive = "", { signal } = {}) {
-            const idCarpeta = extraerIdDriveDesdeUrl(urlDrive);
-            if (!idCarpeta) return { archivos: [], error: null };
-            const urlApi = construirUrlApiCarpetaDrive(idCarpeta);
-            if (!urlApi) return { archivos: [], error: null };
-
-            try {
-                const respuesta = await fetch(urlApi, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                    signal
-                });
-                if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
-
-                const payload = await respuesta.json();
-                const archivosPayload = Array.isArray(payload?.files) ? payload.files : [];
-                const idsPayload = Array.isArray(payload?.ids) ? payload.ids : [];
-
-                const archivos = archivosPayload
-                    .map((archivo) => {
-                        const id = String(archivo?.id || '').trim();
-                        if (!/^[a-zA-Z0-9_-]{10,}$/.test(id)) return null;
-                        return {
-                            id,
-                            name: String(archivo?.name || '').trim(),
-                            mimeType: String(archivo?.mimeType || '').trim()
-                        };
-                    })
-                    .filter(Boolean);
-
-                if (archivos.length) {
-                    const unicos = [];
-                    const vistos = new Set();
-                    archivos.forEach((archivo) => {
-                        if (vistos.has(archivo.id)) return;
-                        vistos.add(archivo.id);
-                        unicos.push(archivo);
-                    });
-                    return { archivos: unicos, error: null };
-                }
-
-                const idsValidos = idsPayload
-                    .map((id) => String(id || '').trim())
-                    .filter((id) => /^[a-zA-Z0-9_-]{10,}$/.test(id));
-
-                return {
-                    archivos: Array.from(new Set(idsValidos)).map((id) => ({ id, name: '', mimeType: '' })),
-                    error: null
-                };
-            } catch (error) {
-                console.warn('[Drive] No se pudieron cargar archivos de la carpeta mediante la API propia.', error);
-                return { archivos: [], error };
-            }
-        }
-
-        function construirGaleriaDriveHtml(archivos = []) {
-            if (!Array.isArray(archivos) || !archivos.length) return '';
-
-            const escAttr = (valor = "") => String(valor)
-                .replace(/&/g, '&amp;')
-                .replace(/"/g, '&quot;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-
-            const tarjetas = archivos
-                .filter((archivo) => archivo && typeof archivo === 'object' && String(archivo.id || '').trim())
-                .map((archivo, index) => {
-                    const idArchivo = String(archivo.id || '').trim();
-                    const mimeType = String(archivo.mimeType || '').trim().toLowerCase();
-                    const esVideo = mimeType.startsWith('video/');
-                    const tipoMedia = esVideo ? 'video' : 'image';
-                    const urlImagen = `https://drive.google.com/uc?export=view&id=${idArchivo}`;
-                    const urlVideo = `https://drive.google.com/file/d/${idArchivo}/preview`;
-                    const urlMedia = esVideo ? urlVideo : urlImagen;
-                    const etiquetaBase = String(archivo.name || '').trim() || (esVideo ? `Video ${index + 1}` : `Foto ${index + 1}`);
-                    const etiqueta = escaparHtmlPlano(etiquetaBase);
-                    return `
-                        <button
-                            type="button"
-                            class="tarjeta-foto-drive ${esVideo ? 'tarjeta-foto-drive-video' : ''}"
-                            aria-label="${escAttr(etiquetaBase)}"
-                            data-media-url="${escAttr(urlMedia)}"
-                            data-media-title="${escAttr(etiquetaBase)}"
-                            data-media-type="${tipoMedia}">
-                            <img src="${escAttr(urlImagen)}" alt="${etiqueta}" loading="lazy" referrerpolicy="no-referrer">
-                        </button>
-                    `;
-                }).join('');
-
-            return `<div class="galeria-fotos-drive">${tarjetas}</div>`;
-        }
-
-        function inicializarEventosGaleriaDrive(contenedor) {
-            if (!contenedor) return;
-
-            contenedor.querySelectorAll('.tarjeta-foto-drive').forEach((tarjeta) => {
-                if (tarjeta.dataset.eventoGaleriaDrive === 'true') return;
-
-                tarjeta.addEventListener('click', () => {
-                    const tipo = String(tarjeta.dataset.mediaType || 'image').toLowerCase();
-                    const url = tarjeta.dataset.mediaUrl || '';
-                    const titulo = tarjeta.dataset.mediaTitle || (tipo === 'video' ? 'Video' : 'Foto');
-
-                    if (!url) return;
-
-                    if (tipo === 'video') {
-                        mostrarModalVistaVideo(url, titulo);
-                        return;
-                    }
-
-                    mostrarModalVistaImagen(url, titulo);
-                });
-
-                tarjeta.dataset.eventoGaleriaDrive = 'true';
-            });
-        }
-
-        function cerrarModalVistaDrive() {
-            if (controladorCargaVistaDrive) {
-                controladorCargaVistaDrive.abort();
-                controladorCargaVistaDrive = null;
-            }
-            document.getElementById('modal-vista-drive')?.remove();
-            document.body.classList.remove('sin-scroll');
-            document.removeEventListener('keydown', manejarEscapeModalDrive);
-        }
-
-        function manejarEscapeModalDrive(event) {
-            const lightboxActivo = document.getElementById('media-lightbox')?.classList.contains('activo');
-            if (event.key === 'Escape' && !lightboxActivo) cerrarModalVistaDrive();
-        }
-
-        async function mostrarModalVistaDrive(urlDrive, titulo = "Carpeta compartida") {
-            cerrarModalVistaDrive();
-
-            const urlEmbebida = construirUrlDriveEmbebida(urlDrive);
-            const resultadoImagenes = await obtenerArchivosPublicosDeCarpetaDrive(urlDrive);
-            const archivos = resultadoImagenes?.archivos || [];
-            const errorConsultaImagenes = Boolean(resultadoImagenes?.error);
-            const galeriaFotos = construirGaleriaDriveHtml(archivos);
-            const permitirAbrirEnPestana = Boolean(CONFIG_VISTA_DRIVE?.permitirAbrirEnPestana);
-            const modal = document.createElement('div');
-            modal.id = 'modal-vista-drive';
-            modal.className = 'modal-vista-drive-fondo';
-
-            modal.innerHTML = `
-                <div class="modal-vista-drive-contenido" role="dialog" aria-modal="true" aria-label="Vista previa de Drive">
-                    <div class="modal-vista-drive-header">
-                        <h3 class="modal-vista-drive-titulo">${titulo}</h3>
-                        <button type="button" class="btn-cerrar-modal-memoria" aria-label="Cerrar">×</button>
-                    </div>
-                    <div class="modal-vista-drive-cuerpo">
-                        ${galeriaFotos ? `
-                            ${galeriaFotos}
-                        ` : errorConsultaImagenes ? `
-                            <div class="mensaje-vista-drive">
-                                <i data-lucide="alert-circle"></i>
-                                <p>No pudimos cargar la vista previa en este momento. Puedes abrir la carpeta en una pestaña nueva.</p>
-                            </div>
-                        ` : urlEmbebida ? `
-                            <div class="contenedor-embed-drive">
-                                <iframe
-                                    class="iframe-vista-drive"
-                                    src="${urlEmbebida}"
-                                    title="Contenido compartido de Google Drive"
-                                    loading="lazy"
-                                    referrerpolicy="no-referrer-when-downgrade"
-                                    allow="clipboard-write">
-                                </iframe>
-                                <p class="mensaje-permisos-drive">No se puede previsualizar aquí por permisos del proveedor.</p>
-                            </div>
-                        ` : `
-                            <div class="mensaje-vista-drive">
-                                <i data-lucide="alert-circle"></i>
-                                <p>No se puede previsualizar aquí por permisos del proveedor.</p>
-                            </div>
-                        `}
-                    </div>
-                    <div class="modal-vista-drive-acciones">
-                        ${permitirAbrirEnPestana ? `<button type="button" class="btn-modal-memoria btn-drive-metal" id="btn-drive-externo">Ver en DRIVE</button>` : ``}
-                        <button type="button" class="btn-modal-memoria btn-drive-cerrar" id="btn-drive-cerrar">Cerrar</button>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-            document.body.classList.add('sin-scroll');
-            document.addEventListener('keydown', manejarEscapeModalDrive);
-            lucide.createIcons();
-
-            const btnCerrarSuperior = modal.querySelector('.btn-cerrar-modal-memoria');
-            const btnCerrar = modal.querySelector('#btn-drive-cerrar');
-            const btnExterno = modal.querySelector('#btn-drive-externo');
-            const contenedorCuerpo = modal.querySelector('.modal-vista-drive-cuerpo');
-
-            btnCerrarSuperior?.addEventListener('click', cerrarModalVistaDrive);
-            btnCerrar?.addEventListener('click', cerrarModalVistaDrive);
-            btnExterno?.addEventListener('click', () => window.open(urlDrive, '_blank', 'noopener,noreferrer'));
-            inicializarEventosGaleriaDrive(contenedorCuerpo);
-            modal.addEventListener('click', (event) => {
-                if (event.target === modal) cerrarModalVistaDrive();
-            });
-
-            const renderizarContenidoModal = (html) => {
-                if (!contenedorCuerpo || !modal.isConnected) return;
-                contenedorCuerpo.innerHTML = html;
-                lucide.createIcons();
-                inicializarEventosGaleriaDrive(contenedorCuerpo);
-            };
-
-            const timeoutMs = 5000;
-            const controlador = new AbortController();
-            controladorCargaVistaDrive = controlador;
-            const timeoutId = setTimeout(() => controlador.abort(), timeoutMs);
-
-            (async () => {
-                try {
-                    const resultado = await obtenerArchivosPublicosDeCarpetaDrive(urlDrive, { signal: controlador.signal });
-                    if (!modal.isConnected || controlador.signal.aborted) return;
-
-                    const galeriaFotos = construirGaleriaDriveHtml(resultado?.archivos || []);
-                    if (galeriaFotos) {
-                        renderizarContenidoModal(galeriaFotos);
-                        return;
-                    }
-
-                    if (urlEmbebida) {
-                        renderizarContenidoModal(`
-                            <iframe
-                                class="iframe-vista-drive"
-                                src="${urlEmbebida}"
-                                title="Contenido compartido de Google Drive"
-                                loading="lazy"
-                                referrerpolicy="no-referrer-when-downgrade"
-                                allow="clipboard-write">
-                            </iframe>
-                        `);
-                        return;
-                    }
-
-                    renderizarContenidoModal(`
-                        <div class="mensaje-vista-drive">
-                            <i data-lucide="alert-circle"></i>
-                            <p>No pudimos previsualizar este enlace dentro de la app.</p>
-                        </div>
-                    `);
-                } catch (_) {
-                    if (!modal.isConnected) return;
-                    renderizarContenidoModal(`
-                        <div class="mensaje-vista-drive">
-                            <i data-lucide="info"></i>
-                            <p>No logramos cargar el contenido ahora. Puedes intentar de nuevo o abrirlo en una pestaña.</p>
-                        </div>
-                    `);
-                } finally {
-                    clearTimeout(timeoutId);
-                    if (controladorCargaVistaDrive === controlador) {
-                        controladorCargaVistaDrive = null;
-                    }
-                }
-            })();
-        }
 
         function obtenerElementosLightbox() {
             return {
@@ -5815,8 +5371,128 @@ const firebaseConfig = {
                 document.getElementById('revivir-menu-carpeta')?.remove();
             }
         });
+        function mostrarModalVistaLocal(fotosUrls, titulo = "Álbum") {
+            cerrarModalVistaDrive(); 
+
+            const galeriaFotos = `<div class="galeria-fotos-drive">` + fotosUrls.map((url, index) => {
+                const esVideo = /\.(mp4|webm|ogg|mov)$/i.test(url);
+                const tipoMedia = esVideo ? 'video' : 'image';
+                const etiquetaBase = esVideo ? `Video ${index + 1}` : `Foto ${index + 1}`;
+                const etiqueta = escaparHtmlPlano(etiquetaBase);
+                const urlEscapada = escaparHtmlPlano(url);
+                
+                return `
+                    <button
+                        type="button"
+                        class="tarjeta-foto-drive ${esVideo ? 'tarjeta-foto-drive-video' : ''}"
+                        aria-label="${etiqueta}"
+                        data-media-url="${urlEscapada}"
+                        data-media-title="${etiqueta}"
+                        data-media-type="${tipoMedia}">
+                        ${esVideo 
+                            ? `<video src="${urlEscapada}" style="width:100%; height:100%; object-fit:cover;"></video>` 
+                            : `<img src="${urlEscapada}" alt="${etiqueta}" loading="lazy">`
+                        }
+                    </button>
+                `;
+            }).join('') + `</div>`;
+
+            const modal = document.createElement('div');
+            modal.id = 'modal-vista-drive';
+            modal.className = 'modal-vista-drive-fondo';
+
+            modal.innerHTML = `
+                <div class="modal-vista-drive-contenido" role="dialog" aria-modal="true" aria-label="Vista previa">
+                    <div class="modal-vista-drive-header">
+                        <h3 class="modal-vista-drive-titulo">${titulo}</h3>
+                        <button type="button" class="btn-cerrar-modal-memoria" aria-label="Cerrar">×</button>
+                    </div>
+                    <div class="modal-vista-drive-cuerpo">
+                        ${galeriaFotos}
+                    </div>
+                    <div class="modal-vista-drive-acciones">
+                        <button type="button" class="btn-modal-memoria btn-drive-cerrar" id="btn-drive-cerrar">Cerrar</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            document.body.classList.add('sin-scroll');
+            document.addEventListener('keydown', manejarEscapeModalDrive);
+            lucide.createIcons();
+
+            const btnCerrarSuperior = modal.querySelector('.btn-cerrar-modal-memoria');
+            const btnCerrar = modal.querySelector('#btn-drive-cerrar');
+            const contenedorCuerpo = modal.querySelector('.modal-vista-drive-cuerpo');
+
+            btnCerrarSuperior?.addEventListener('click', cerrarModalVistaDrive);
+            btnCerrar?.addEventListener('click', cerrarModalVistaDrive);
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) cerrarModalVistaDrive();
+            });
+
+            inicializarEventosGaleriaDrive(contenedorCuerpo);
+        }
+
+        async function cargarFotosDesdeJSON() {
+            try {
+                const response = await fetch('fotos.json');
+                if (!response.ok) return;
+                const fotosData = await response.json();
+
+                for (const idPais in paisesVisitados) {
+                    const pais = paisesVisitados[idPais];
+                    if (pais.albumes) {
+                        pais.albumes.forEach(album => {
+                            if (fotosData[album.id]) album.fotosLocales = fotosData[album.id];
+                        });
+                    }
+                    if (provinciasVisitadas[idPais]) {
+                        for (const idProvincia in provinciasVisitadas[idPais]) {
+                            const provincia = provinciasVisitadas[idPais][idProvincia];
+                            if (provincia.albumes) {
+                                provincia.albumes.forEach(album => {
+                                    if (fotosData[album.id]) album.fotosLocales = fotosData[album.id];
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn("No se encontró o no se pudo cargar fotos.json local:", error);
+            }
+        }
+       async function cargarVisitadosDesdeJSON() {
+            try {
+                const response = await fetch('visitados.json');
+                if (!response.ok) return;
+                const data = await response.json();
+                
+                if (data.paisesVisitados) {
+                    for (const paisId in data.paisesVisitados) {
+                        const infoPais = data.paisesVisitados[paisId];
+                        
+                        if (!paisesVisitados[paisId]) paisesVisitados[paisId] = {};
+                        paisesVisitados[paisId].nombre = infoPais.nombre;
+                        
+                        if (infoPais.provinciasVisitadas) {
+                            if (!provinciasVisitadas[paisId]) provinciasVisitadas[paisId] = {};
+                            Object.assign(provinciasVisitadas[paisId], infoPais.provinciasVisitadas);
+                        }
+                    }
+                }
+                
+                normalizarColeccionMemorias();
+                cargarMapa();
+                if (document.getElementById('vista-vividas')?.classList.contains('pantalla-activa')) {
+                    renderizarPantallaRecuerdos();
+                }
+            } catch (error) {
+                console.warn("No se encontró o no se pudo cargar visitados.json local:", error);
+            }
+        }
 
         document.addEventListener("DOMContentLoaded", async () => {
-            iniciarSincronizacionFirebase();
+            await cargarVisitadosDesdeJSON();
+            await cargarFotosDesdeJSON();
         });
-    
