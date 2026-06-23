@@ -53,6 +53,12 @@
         <div class="media-lightbox__dialog" role="dialog" aria-modal="true" aria-label="Visor multimedia">
             <div class="media-lightbox__toolbar">
                 <span id="media-lightbox-status" class="media-lightbox__status"></span>
+                <select id="lightbox-duration-select" class="media-lightbox__duration" aria-label="Duración de imágenes">
+                    <option value="3000">3s</option>
+                    <option value="6000" selected>6s</option>
+                    <option value="10000">10s</option>
+                </select>
+                <button type="button" id="lightbox-play-btn" class="media-lightbox__play" aria-label="Iniciar reproducción">▶</button>
                 <button type="button" id="media-lightbox-fullscreen" class="media-lightbox__fullscreen" aria-label="Ver en pantalla completa">⛶</button>
                 <button type="button" id="media-lightbox-close" class="media-lightbox__close" aria-label="Cerrar visor">×</button>
             </div>

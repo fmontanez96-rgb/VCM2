@@ -2,7 +2,7 @@
         lucide.createIcons();
 
         // BASES DE DATOS EN MEMORIA
-        let paisesVisitados = {};
+       let paisesVisitados = {};
         let provinciasVisitadas = {}; 
         let destinosSonados = {}; 
         let estadoVistaRecuerdos = { modo: 'lista', idPais: null, idProvincia: null, submodo: 'ver', seccionNuevo: 'drive' };
@@ -14,6 +14,14 @@
         window.playersMusica = playersMusica;
         let youtubeApiPromise = null;
         let youtubeApiReadyResolver = null;
+        
+        // VARIABLES GLOBALES DEL MÓDULO REVIVIR
+        let presentacionActivaRevivir = false;
+        let carpetasRevivir = [];
+        let idCarpetaRevivirActiva = null;
+        let indiceMediaRevivirActual = -1;
+        let bibliotecaRevivir = [];
+        let temporizadorPresentacionRevivir = null;
 
         function cargarYoutubeIframeApiUnaVez() {
             if (window.YT && typeof window.YT.Player === 'function') {
@@ -2006,32 +2014,15 @@
             const nombreCiudad = idProvincia ? objDestino.nombre : nombreTitulo;
             const nombrePais = idProvincia ? pais.nombre : '';
             const nombreLeyendaMusica = (idProvincia ? objDestino.nombre : pais.nombre || nombreTitulo).trim();
+            
             const bloqueNuevo = submodoActual === 'nuevo' ? `
                 <div class="tabs-agregar-memoria-metal">
-                    <button id="tab-drive" class="btn-subtab-memoria-metal btn-subtab-drive activo" onclick="cambiarSeccionRecuerdos('drive', '${idPais}', ${paramProv})">
-                        <i data-lucide="folder"></i> Drive
-                    </button>
-                    <button id="tab-historias" class="btn-subtab-memoria-metal btn-subtab-historia" onclick="cambiarSeccionRecuerdos('historias', '${idPais}', ${paramProv})">
+                    <button id="tab-historias" class="btn-subtab-memoria-metal btn-subtab-historia activo" onclick="cambiarSeccionRecuerdos('historias', '${idPais}', ${paramProv})">
                         <i data-lucide="book-open"></i> Historias
                     </button>
                 </div>
 
-                <div id="form-drive" class="form-memoria-metal form-memoria-drive">
-                    <h4 class="titulo-form-memoria-metal titulo-form-drive"><i data-lucide="plus-circle"></i> Agregar Nueva Carpeta</h4>
-                    <div class="campos-memoria-metal">
-                        <input class="campo-memoria-metal" type="text" id="nombre-carpeta-drive" placeholder="Nombre (ej: Fotos del Hotel)">
-                        <input class="campo-memoria-metal" type="text" id="portada-drive-url" placeholder="URL de portada (opcional)">
-                        <label class="label-memoria-metal">o subir portada desde tu PC:
-                            <input class="campo-archivo-memoria-metal" type="file" id="portada-drive-file" accept="image/*">
-                        </label>
-                        <div class="fila-guardar-memoria-metal">
-                            <input class="campo-memoria-metal campo-memoria-flex" type="text" id="url-carpeta-drive" placeholder="Link de Drive...">
-                            <button class="btn-guardar-memoria-metal btn-guardar-drive" onclick="agregarCarpetaDrive('${idPais}', ${paramProv})"><i data-lucide="save"></i></button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="form-historias" class="form-memoria-metal form-memoria-historia oculto">
+                <div id="form-historias" class="form-memoria-metal form-memoria-historia">
                     <h4 class="titulo-form-memoria-metal titulo-form-historia"><i data-lucide="pen-tool"></i> Escribir una Anécdota</h4>
                     <div class="campos-memoria-metal">
                         <input class="campo-memoria-metal" type="text" id="titulo-historia" placeholder="Título de la historia...">
@@ -2315,24 +2306,14 @@
 
         window.cambiarSeccionRecuerdos = function(tipo, idPais, idProvincia = null) {
             if (estadoVistaRecuerdos.submodo !== 'nuevo') return;
-            const btnDrive = document.getElementById('tab-drive');
             const btnHistorias = document.getElementById('tab-historias');
-            const formDrive = document.getElementById('form-drive');
             const formHistorias = document.getElementById('form-historias');
-            estadoVistaRecuerdos.seccionNuevo = tipo === 'historias' ? 'historias' : 'drive';
+            estadoVistaRecuerdos.seccionNuevo = 'historias';
 
-            if (tipo === 'drive') {
-                btnDrive?.classList.add('activo');
-                btnHistorias?.classList.remove('activo');
-                formDrive?.classList.remove('oculto');
-                formHistorias?.classList.add('oculto');
-            } else {
-                btnHistorias?.classList.add('activo');
-                btnDrive?.classList.remove('activo');
-                formDrive?.classList.add('oculto');
-                formHistorias?.classList.remove('oculto');
-            }
-            actualizarVistaAlbumes(idPais, idProvincia, tipo);
+            btnHistorias?.classList.add('activo');
+            formHistorias?.classList.remove('oculto');
+            
+            actualizarVistaAlbumes(idPais, idProvincia, 'historias');
         };
 
         window.actualizarVistaRecuerdosSoloLectura = function(idPais, idProvincia = null) {
@@ -2372,10 +2353,10 @@
             let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
             contenedor.innerHTML = '';
 
-            if (vista === 'drive') {
+            if (vista === 'drive' || vista === 'albumes') {
                 const albumes = objDestino.albumes || [];
                 if (albumes.length === 0) {
-                    contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="folder-x" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>No hay carpetas compartidas aún.</p></div>';
+                    contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;"><i data-lucide="images" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>No hay álbumes locales cargados aún.</p></div>';
                 } else {
                     albumes.forEach((album, index) => {
                         contenedor.innerHTML += construirTarjetaMemoria('drive', album, {
@@ -2426,14 +2407,13 @@
             const placeholder = tipo === 'drive'
                 ? 'https://via.placeholder.com/500?text=Sin+Portada'
                 : 'https://via.placeholder.com/500?text=Sin+Imagen';
-            const imagen = tipo === 'drive' ? (item.portada || placeholder) : (item.img || placeholder);
+            const imagen = tipo === 'drive' ? (item.portada || item.portadaUrl || placeholder) : (item.img || placeholder);
             const titulo = tipo === 'drive' ? (item.nombre || 'Sin nombre') : (item.titulo || 'Sin título');
             const claseTitulo = tipo === 'drive' ? 'drive' : 'historia';
             const claseTipoMemoria = tipo === 'drive' ? 'memoria-drive' : 'memoria-historia';
             const abrir = tipo === 'drive'
-                ? `abrirMemoriaDrive('${idPais}', ${paramProv}, ${index})`
+                ? `abrirAlbumLocal('${idPais}', ${paramProv}, ${index})`
                 : `leerHistoria('${idPais}', ${paramProv}, ${index})`;
-
             return `
                 <article class="tarjeta-memoria-cuadrada ${claseTipoMemoria}" onclick="${abrir}" oncontextmenu="abrirMenuMemoria(event, '${idPais}', ${paramProv}, ${index}, '${tipo}')">
                     <div class="imagen-memoria" style="background-image: url('${imagen}');"></div>
@@ -2608,37 +2588,16 @@
             document.body.appendChild(modal);
         };
 
-        window.abrirMemoriaDrive = function(idPais, idProvincia = null, index) {
-            const destino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            const album = destino?.albumes?.[index];
-            const titulo = album?.nombre || "Carpeta compartida";
-
-            if (album && album.fotosLocales && album.fotosLocales.length > 0) {
-                mostrarModalVistaLocal(album.fotosLocales, titulo);
-                return;
-            }
-
-            const urlDrive = resolverUrlDriveAlbum(album);
-
-            const tipoMultimedia = resolverTipoMultimedia(album, urlDrive);
-            if (tipoMultimedia === 'imagen') {
-                const urlImagen = obtenerUrlMultimediaDirecta(album?.portada || urlDrive, 'imagen');
-                mostrarModalVistaImagen(urlImagen, titulo);
-                return;
-            }
-
-            if (tipoMultimedia === 'video') {
-                const urlVideo = obtenerUrlMultimediaDirecta(urlDrive || album?.portada, 'video');
-                mostrarModalVistaVideo(urlVideo, titulo);
-                return;
-            }
-
-            if (!urlDrive) {
-                alert("No se encontró un enlace válido para esta memoria.");
-                return;
-            }
-            mostrarModalVistaDrive(urlDrive, titulo);
-        };
+        window.abrirAlbumLocal = function(idPais, idProvincia = null, index) {
+    const destino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
+    const album = destino?.albumes?.[index];
+    const titulo = album?.nombre || "Álbum Local";
+    if (album && album.fotosLocales && album.fotosLocales.length > 0) {
+        mostrarModalVistaLocal(album.fotosLocales, titulo);
+    } else {
+        alert("Este álbum no tiene fotos cargadas en fotos.json todavía.");
+    }
+};
 
         function resolverTipoMultimedia(album, urlDrive = "") {
             const portada = String(album?.portada || "").trim();
@@ -3193,27 +3152,7 @@
             if (menu && !event.target.closest('.tarjeta-memoria-cuadrada')) cerrarMenuMemoria();
         });
 
-        window.agregarCarpetaDrive = async function(idPais, idProvincia = null) {
-            const nombre = document.getElementById('nombre-carpeta-drive').value.trim();
-            const url = document.getElementById('url-carpeta-drive').value.trim();
-            if (!nombre || !url) { alert("Faltan datos."); return; }
-            if (!url.includes('drive.google.com')) { alert("Link no válido."); return; }
-
-            let portada = '';
-            try {
-                portada = await obtenerImagenPortada('portada-drive-url', 'portada-drive-file');
-            } catch (error) {
-                alert(error.message);
-                return;
-            }
-
-            let objDestino = idProvincia ? provinciasVisitadas[idPais][idProvincia] : paisesVisitados[idPais];
-            objDestino.albumes.push({ nombre, url, driveUrl: url, portada });
-            registrarCambioLocal(true);
-            estadoVistaRecuerdos.submodo = 'ver';
-            mostrarToastExito('Memoria de Drive guardada con éxito.');
-            window.abrirAlbumDetalle(idPais, idProvincia, 'ver');
-        };
+    
 
         // Redirigimos la función huérfana para evitar errores con código viejo que tenías debajo
         window.abrirAlbumProvincia = function(countryId, provId) {
@@ -5366,11 +5305,34 @@
             if (menuRevivir && !menuRevivir.contains(event.target)) menuRevivir.remove();
         });
 
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                document.getElementById('revivir-menu-carpeta')?.remove();
-            }
-        });
+        function cerrarModalVistaDrive() {
+            const modal = document.getElementById('modal-vista-drive');
+            if (modal) modal.remove();
+            document.body.classList.remove('sin-scroll');
+            document.removeEventListener('keydown', manejarEscapeModalDrive);
+        }
+
+        function manejarEscapeModalDrive(event) {
+            if (event.key === 'Escape') cerrarModalVistaDrive();
+        }
+
+        function inicializarEventosGaleriaDrive(contenedor) {
+            if (!contenedor) return;
+            const botones = contenedor.querySelectorAll('.tarjeta-foto-drive');
+            botones.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const url = btn.getAttribute('data-media-url');
+                    const title = btn.getAttribute('data-media-title');
+                    const type = btn.getAttribute('data-media-type');
+                    
+                    if (type === 'video') {
+                        mostrarModalVistaVideo(url, title);
+                    } else {
+                        mostrarModalVistaImagen(url, title);
+                    }
+                });
+            });
+        }
         function mostrarModalVistaLocal(fotosUrls, titulo = "Álbum") {
             cerrarModalVistaDrive(); 
 
@@ -5495,4 +5457,133 @@
         document.addEventListener("DOMContentLoaded", async () => {
             await cargarVisitadosDesdeJSON();
             await cargarFotosDesdeJSON();
+            
+            window.albumSlideshowMedia = [];
+            window.albumSlideshowIndex = -1;
+            window.albumSlideshowActivo = false;
+            window.albumSlideshowTimer = null;
+
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('img, video');
+                if (!target || target.id.startsWith('media-lightbox')) return;
+                
+                if (target.closest('#vista-vividas')) {
+                    const todosLosMedias = Array.from(document.querySelectorAll('#vista-vividas img, #vista-vividas video'))
+                        .map(el => el.getAttribute('src'))
+                        .filter(src => src && src.includes('multimedia/'));
+                    
+                    if (todosLosMedias.length > 0) {
+                        window.albumSlideshowMedia = todosLosMedias;
+                        const currentSrc = target.getAttribute('src');
+                        window.albumSlideshowIndex = todosLosMedias.indexOf(currentSrc);
+                    }
+                }
+            }, true);
+
+            function toggleAlbumSlideshow() {
+                const btn = document.getElementById('lightbox-play-btn');
+                if (window.albumSlideshowActivo) {
+                    detenerAlbumSlideshow();
+                } else {
+                    window.albumSlideshowActivo = true;
+                    if (btn) btn.textContent = '⏸';
+                    
+                    const lightbox = document.getElementById('media-lightbox');
+                    if (lightbox && !document.fullscreenElement) {
+                        lightbox.requestFullscreen?.().catch(() => {});
+                    }
+                    
+                    if (window.albumSlideshowIndex >= 0 && window.albumSlideshowMedia && window.albumSlideshowMedia[window.albumSlideshowIndex]) {
+                        mostrarMediaEnLightboxActual(window.albumSlideshowMedia[window.albumSlideshowIndex]);
+                    } else {
+                        window.albumSlideshowIndex = 0;
+                        if (window.albumSlideshowMedia && window.albumSlideshowMedia.length > 0) {
+                            mostrarMediaEnLightboxActual(window.albumSlideshowMedia[window.albumSlideshowIndex]);
+                        }
+                    }
+                }
+            }
+
+            function detenerAlbumSlideshow() {
+                window.albumSlideshowActivo = false;
+                clearTimeout(window.albumSlideshowTimer);
+                const btn = document.getElementById('lightbox-play-btn');
+                if (btn) btn.textContent = '▶';
+                const vid = document.getElementById('media-lightbox-video');
+                if (vid) vid.onended = null;
+            }
+
+            function avanzarAlbumSlideshow() {
+                if (!window.albumSlideshowActivo) return;
+                window.albumSlideshowIndex++;
+                if (window.albumSlideshowIndex >= window.albumSlideshowMedia.length) {
+                    window.albumSlideshowIndex = 0;
+                }
+                if (window.albumSlideshowMedia && window.albumSlideshowMedia.length > 0) {
+                    mostrarMediaEnLightboxActual(window.albumSlideshowMedia[window.albumSlideshowIndex]);
+                } else {
+                    detenerAlbumSlideshow();
+                }
+            }
+
+            function mostrarMediaEnLightboxActual(src) {
+                const img = document.getElementById('media-lightbox-image');
+                const vid = document.getElementById('media-lightbox-video');
+                const status = document.getElementById('media-lightbox-status');
+                
+                if (!img || !vid) return;
+                vid.pause();
+                
+                if (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov')) {
+                    img.hidden = true;
+                    img.src = '';
+                    vid.src = src;
+                    vid.hidden = false;
+                    vid.load();
+                    vid.play().catch(() => {});
+                    
+                    if (window.albumSlideshowActivo) {
+                        clearTimeout(window.albumSlideshowTimer);
+                        vid.onended = function() {
+                            avanzarAlbumSlideshow();
+                        };
+                    }
+                } else {
+                    vid.hidden = true;
+                    vid.src = '';
+                    vid.onended = null;
+                    img.src = src;
+                    img.hidden = false;
+                    
+                    if (window.albumSlideshowActivo) {
+                        clearTimeout(window.albumSlideshowTimer);
+                        const selectDuracion = document.getElementById('lightbox-duration-select');
+                        const ms = selectDuracion ? parseInt(selectDuracion.value, 10) : 6000;
+                        window.albumSlideshowTimer = setTimeout(avanzarAlbumSlideshow, ms);
+                    }
+                }
+                
+                if (status && window.albumSlideshowMedia && window.albumSlideshowMedia.length > 0) {
+                    status.textContent = `${window.albumSlideshowIndex + 1} / ${window.albumSlideshowMedia.length}`;
+                }
+            }
+
+            const playBtn = document.getElementById('lightbox-play-btn');
+            if (playBtn) {
+                playBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleAlbumSlideshow();
+                });
+            }
+
+            const closeBtn = document.getElementById('media-lightbox-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', detenerAlbumSlideshow);
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Escape') {
+                    detenerAlbumSlideshow();
+                }
+            });
         });
