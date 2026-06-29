@@ -1,101 +1,169 @@
+[
+  {
+    "nombre": "Argentina",
+    "portada": "portadas/argentina.jpg",
+    "ciudades": [
+      {
+        "nombre": "Buenos Aires",
+        "portada": "portadas/buenosaires.jpg",
+        "albumes": [
+          {
+            "id": "pasantias",
+            "nombre": "Pasantías 2019",
+            "portada": "portadas/pasantias2019.jpg"
+          },
+          {
+            "id": "taylor",
+            "nombre": "Taylor 2023",
+            "portada": "portadas/taylor.jpg"
+          }]
+      },
+      {
+        "nombre": "Mendoza",
+        "portada": "portadas/mendoza.jpg",
+        "albumes": []
+      },
+      {
+        "nombre": "Neuquén",
+        "portada": "portadas/neuquen.jpg",
+        "albumes": [
+          {
+            "id": "lanin",
+            "nombre": "Volcán Lanín",
+            "portada": "portadas/lanin.jpg"
+          }  ]
+      },
+      {
+        "nombre": "Misiones",
+        "portada": "portadas/misiones.jpg",
+        "albumes": [
+          {
+            "id": "cataratas",
+            "nombre": "Cataratas de Iguazú",
+            "portada": "portadas/cataratas.jpg"
+          },
+          {
+            "id": "minas",
+            "nombre": "Minas de Wanda",
+            "portada": "portadas/minas.jpg"
+          }   ]
+      },
+      {
+        "nombre": "Córdoba",
+        "portada": "portadas/cordoba.jpg",
+        "albumes": [
+          {
+            "id": "lunademiel",
+            "nombre": "Luna de Miel",
+            "portada": "portadas/lunademiel.jpg"
+          }  ]
+      },
+      {
+        "nombre": "San Luis",
+        "portada": "portadas/sanluis.jpg",
+        "albumes": []
+      }
+    ]
+  },
+  {
+    "nombre": "Chile",
+    "portada": "portadas/chile.jpg",
+    "ciudades": [
+      {
+        "nombre": "Valparaíso",
+        "portada": "portadas/valparaiso.jpg",
+        "albumes": [
+          {
+            "id": "vergara",
+            "nombre": "Muelle Vergara",
+            "portada": "portadas/vergara.jpg"
+          },
+          {
+            "id": "lobo",
+            "nombre": "Lobos Marinos",
+            "portada": "portadas/lobo.jpg"
+          },
+          {
+            "id": "valpo",
+            "nombre": "Valparaiso",
+            "portada": "portadas/valpo.jpg"
+          },
+          {
+            "id": "horcon",
+            "nombre": "Horcón",
+            "portada": "portadas/horcon.jpg"
+          } ,
+          {
+            "id": "2018",
+            "nombre": "Videos 2018",
+            "portada": "portadas/2018.jpg"
+          }       
+        ]
+      }
+    ]
+  },
 {
-  "paisesVisitados": {
-    "ARG": {
-      "nombre": "Argentina",
-      "portadaUrl": "portadas/argentina.jpg",
-      "provinciasVisitadas": {
-        "Buenos Aires": {
-          "nombre": "Buenos Aires",
-          "portadaUrl": "portadas/buenosaires.jpg",
-          "albumes": [
-            { "id": "alb-001", "nombre": "Pasantías 2019", "portadaUrl": "portadas/pasantias2019.jpg"},
-            { "id": "alb-002", "nombre": "Taylor 2023" }
-          ],
-          "historias": []
-        },
-        "Mendoza": {
-          "nombre": "Mendoza",
-          "portadaUrl": "portadas/mendoza.jpg",
-          "albumes": [
-            { "id": "alb-003", "nombre": "San Rafael" }
-          ],
-          "historias": []
-        },
-        "Misiones": {
-          "nombre": "Misiones",
-          "portadaUrl": "portadas/misiones.jpg",
-          "albumes": [
-            { "id": "alb-004", "nombre": "Luna de Miel" }
-          ],
-          "historias": []
-        },
-        "Córdoba": {
-          "nombre": "Córdoba",
-          "portadaUrl": "portadas/cordoba.jpg",
-          "albumes": [
-            { "id": "alb-005", "nombre": "Luna de Miel" }
-          ],
-          "historias": []
-        },
-        "San Luis": {
-          "nombre": "San Luis",
-          "portadaUrl": "portadas/sanluis.jpg",
-          "albumes": [],
-          "historias": []
-        },
-        "Neuquén": {
-          "nombre": "Neuquén",
-          "portadaUrl": "portadas/neuquen.jpg",
-          "albumes": [
-            { "id": "alb-006", "nombre": "Volcán Lanín" }
-          ],
-          "historias": []
-        }
+    "nombre": "Brazil",
+    "portada": "portadas/brasil.jpg",
+    "ciudades": [
+      {
+        "nombre": "Rio de Janeiro",
+        "portada": "portadas/riodejaneiro.jpg",
+        "albumes": [
+          {
+            "id": "aquario",
+            "nombre": "AquaRio",
+            "portada": "portadas/aquario.jpg",
+            "musica": "https://www.youtube.com/watch?v=fCZVL_8D048&list=RDfCZVL_8D048&start_radio=1"
+          },
+          {
+            "id": "barco",
+            "nombre": "Barcos",
+            "portada": "portadas/barco.jpg"
+          },
+          {
+            "id": "azucar",
+            "nombre": "Pan De Azucar",
+            "portada": "portadas/azucar.jpg"
+          },
+          {
+            "id": "maracana",
+            "nombre": "Maracaná",
+            "portada": "portadas/maracana.jpg"
+          },
+          {
+            "id": "isla",
+            "nombre": "Isla Grande",
+            "portada": "portadas/isla.jpg"
+          },
+          {
+            "id": "cristo",
+            "nombre": "Cristo Redentor",
+            "portada": "portadas/cristo.jpg"
+          },
+          {
+            "id": "ipanema",
+            "nombre": "Ipanema",
+            "portada": "portadas/ipanema.jpg"
+          },
+          {
+            "id": "copacabana",
+            "nombre": "Copacabana",
+            "portada": "portadas/copacabana.jpg"
+          }
+        ]
+      },
+      {
+        "nombre": "Paraná",
+        "portada": "portadas/fozdoiguazu.jpg",
+        "albumes": [
+          {
+            "id": "´iguazu",
+            "nombre": "Parque Das Aves",
+            "portada": "portadas/fozdoiguazu.jpg"
+          }
+        ]
       }
-    },
-    "CHL": {
-      "nombre": "Chile",
-      "portadaUrl": "portadas/chile.jpg",
-      "provinciasVisitadas": {
-        "Valparaiso": {
-          "nombre": "Valparaiso",
-          "portadaUrl": "portadas/valparaiso.jpg",
-          "albumes": [
-            { "id": "alb-007", "nombre": "Mall Marina" },
-            { "id": "alb-008", "nombre": "Lobos Marinos" },
-            { "id": "alb-009", "nombre": "Barcos" },
-            { "id": "alb-010", "nombre": "Horcón" }
-          ],
-          "historias": []
-        }
-      }
-    },
-    "BRA": {
-      "nombre": "Brasil",
-      "portadaUrl": "portadas/brasil.jpg",
-      "provinciasVisitadas": {
-        "Rio De Janeiro": {
-          "nombre": "Rio de Janeiro",
-          "portadaUrl": "portadas/riodejaneiro.jpg",
-          "albumes": [
-            { "id": "alb-011", "nombre": "Barcos" },
-            { "id": "alb-012", "nombre": "AquaRio" },
-            { "id": "alb-013", "nombre": "Maracaná" },
-            { "id": "alb-014", "nombre": "Pan De Azúcar" },
-            { "id": "alb-015", "nombre": "Ipanema" },
-            { "id": "alb-016", "nombre": "Copacabana" },
-            { "id": "alb-017", "nombre": "Cristo Redentor" },
-            { "id": "alb-018", "nombre": "Islas" }
-          ],
-          "historias": []
-        },
-        "Foz Do Iguazú": {
-          "nombre": "Foz do Iguazú",
-          "portadaUrl": "portadas/fozdoiguazu.jpg",
-          "albumes": [{ "id": "alb-019", "nombre": "Parque das Aves" }],
-          "historias": []
-        }
-      }
-    }
+    ]
   }
-}
+]
